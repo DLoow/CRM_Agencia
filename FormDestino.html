@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family:'Plus Jakarta Sans',sans-serif; box-sizing:border-box; }
+  body { background:#f0f4ff; margin:0; padding:.75rem; }
+  input,select,textarea { width:100%; border:1px solid #e5e7eb; border-radius:.75rem; padding:.5rem .75rem; font-size:.875rem; background:#fff; outline:none; font-family:inherit; }
+  input:focus,select:focus,textarea:focus { border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2); }
+  .label { display:block; font-size:.7rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.25rem; }
+  .card { background:#fff; border-radius:1rem; padding:.85rem; box-shadow:0 1px 6px rgba(0,0,0,.07); margin-bottom:.65rem; }
+  .btn-blue { background:linear-gradient(135deg,#1e40af,#3b82f6); color:#fff; border-radius:.75rem; padding:.6rem 1rem; font-size:.875rem; font-weight:700; cursor:pointer; border:none; width:100%; }
+  .btn-gray { background:#f3f4f6; color:#374151; border-radius:.75rem; padding:.55rem 1rem; font-size:.875rem; font-weight:600; cursor:pointer; border:none; width:100%; }
+  .btn-sm { border-radius:.5rem; padding:.3rem .65rem; font-size:.7rem; font-weight:700; cursor:pointer; border:none; }
+  .toast { position:fixed; top:1rem; left:50%; transform:translateX(-50%); background:#059669; color:#fff; padding:.5rem 1.2rem; border-radius:9999px; font-size:.8rem; font-weight:600; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; }
+  .badge-activo   { background:#dcfce7; color:#166534; }
+  .badge-inactivo { background:#fee2e2; color:#991b1b; }
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<div class="flex items-center gap-2 mb-3">
+  <div class="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-lg shadow">🗺️</div>
+  <div>
+    <h1 class="text-base font-extrabold text-gray-800 leading-tight">Gestión de Destinos</h1>
+    <p class="text-xs text-gray-400">Crea y edita rutas de viaje</p>
+  </div>
+  <button onclick="cargarDestinos()" class="ml-auto text-blue-500 text-xl">⟳</button>
+</div>
+
+<!-- FORM NUEVO DESTINO -->
+<div class="card" id="form-destino">
+  <p class="label mb-3" id="form-titulo">Nuevo Destino</p>
+  <input type="hidden" id="dst-id">
+  <div class="space-y-3">
+    <div><label class="label">Ruta / Nombre del viaje *</label>
+      <input type="text" id="dst-ruta" placeholder="Ej: Cartagena - Playa Blanca"></div>
+    <div class="grid grid-cols-2 gap-2">
+      <div><label class="label">Valor por persona *</label>
+        <input type="number" id="dst-valor" placeholder="0" inputmode="decimal"></div>
+      <div><label class="label">Cupo total *</label>
+        <input type="number" id="dst-cupo" placeholder="0" inputmode="numeric"></div>
+    </div>
+    <div><label class="label">Fecha del viaje</label>
+      <input type="date" id="dst-fecha"></div>
+    <div><label class="label">Punto de encuentro</label>
+      <input type="text" id="dst-punto" placeholder="Ej: Parque Berrío, 5:00 AM"></div>
+    <div><label class="label">¿Qué incluye?</label>
+      <textarea id="dst-incluye" rows="3" placeholder="Transporte, hotel, desayunos..."></textarea></div>
+    <div><label class="label">Estado</label>
+      <select id="dst-estado">
+        <option value="Activo">Activo</option>
+        <option value="Inactivo">Inactivo</option>
+        <option value="Lleno">Lleno</option>
+        <option value="Cancelado">Cancelado</option>
+      </select>
+    </div>
+  </div>
+  <div class="mt-4 space-y-2">
+    <button onclick="guardarDestino()" class="btn-blue">💾 Guardar Destino</button>
+    <button onclick="limpiarForm()" class="btn-gray">✕ Limpiar</button>
+  </div>
+</div>
+
+<!-- LISTA DESTINOS -->
+<h2 class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Destinos registrados</h2>
+<div id="lista-destinos" class="space-y-2">
+  <div class="text-xs text-gray-400 text-center py-4">Cargando...</div>
+</div>
+
+<script>
+function showToast(msg,color='#059669'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=color; t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0',2500);
+}
+function fmt(n){ return '$'+(Number(n)||0).toLocaleString('es-CO'); }
+
+function cargarDestinos(){
+  google.script.run.withSuccessHandler(ds=>{
+    const c = document.getElementById('lista-destinos');
+    if(!ds.length){ c.innerHTML='<div class="text-xs text-gray-400 text-center py-4">Sin destinos registrados</div>'; return; }
+    c.innerHTML = ds.map(d=>{
+      const badgeCls = d.estado==='Activo'?'badge-activo':'badge-inactivo';
+      const pct = d.cupo>0?Math.round(((d.cupo-d.cuposDisponibles)/d.cupo)*100):0;
+      return `
+        <div class="card">
+          <div class="flex justify-between items-start mb-1">
+            <div class="min-w-0">
+              <div class="text-sm font-bold text-gray-800 leading-tight truncate">✈️ ${d.ruta}</div>
+              <div class="text-xs text-gray-400">${d.fechaViaje||'Sin fecha definida'}</div>
+            </div>
+            <span class="text-xs font-bold px-2 py-0.5 rounded-full ${badgeCls} ml-2 shrink-0">${d.estado}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 text-xs my-2">
+            <span class="text-gray-400">Valor/pax:</span><span class="font-bold text-blue-700">${fmt(d.valorPersona)}</span>
+            <span class="text-gray-400">Cupos disp.:</span><span class="font-bold">${d.cuposDisponibles} / ${d.cupo}</span>
+          </div>
+          <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+            <div class="h-1.5 rounded-full bg-blue-500" style="width:${pct}%"></div>
+          </div>
+          ${d.incluye?`<div class="text-xs text-gray-500 truncate mb-2">✅ ${d.incluye}</div>`:''}
+          <div class="flex gap-2">
+            <button onclick="editarDestino(${JSON.stringify(d).replace(/"/g,'&quot;')})" 
+              class="btn-sm bg-blue-100 text-blue-700 flex-1">✏️ Editar</button>
+            <button onclick="toggleEstado('${d.id}','${d.estado==='Activo'?'Inactivo':'Activo'}')"
+              class="btn-sm ${d.estado==='Activo'?'bg-red-100 text-red-600':'bg-green-100 text-green-700'} flex-1">
+              ${d.estado==='Activo'?'⏸ Pausar':'▶ Activar'}
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }).obtenerDestinos();
+}
+
+function guardarDestino(){
+  const ruta  = document.getElementById('dst-ruta').value.trim();
+  const valor = Number(document.getElementById('dst-valor').value);
+  const cupo  = Number(document.getElementById('dst-cupo').value);
+  if(!ruta||!valor||!cupo){ showToast('❗ Ruta, valor y cupo son obligatorios','#dc2626'); return; }
+
+  const datos = {
+    id:             document.getElementById('dst-id').value,
+    ruta, valorPersona: valor, cupo,
+    fechaViaje:     document.getElementById('dst-fecha').value,
+    puntoEncuentro: document.getElementById('dst-punto').value.trim(),
+    incluye:        document.getElementById('dst-incluye').value.trim(),
+    estado:         document.getElementById('dst-estado').value
+  };
+
+  if(datos.id){
+    google.script.run.withSuccessHandler(r=>{
+      showToast('✅ Destino actualizado'); limpiarForm(); cargarDestinos();
+    }).actualizarDestino(datos);
+  } else {
+    google.script.run.withSuccessHandler(r=>{
+      showToast('✅ Destino creado: '+r.id); limpiarForm(); cargarDestinos();
+    }).crearDestino(datos);
+  }
+}
+
+function editarDestino(d){
+  document.getElementById('form-titulo').textContent = 'Editar Destino';
+  document.getElementById('dst-id').value     = d.id;
+  document.getElementById('dst-ruta').value   = d.ruta;
+  document.getElementById('dst-valor').value  = d.valorPersona;
+  document.getElementById('dst-cupo').value   = d.cupo;
+  document.getElementById('dst-fecha').value  = d.fechaViaje||'';
+  document.getElementById('dst-punto').value  = d.puntoEncuentro||'';
+  document.getElementById('dst-incluye').value= d.incluye||'';
+  document.getElementById('dst-estado').value = d.estado||'Activo';
+  document.getElementById('form-destino').scrollIntoView({behavior:'smooth'});
+}
+
+function toggleEstado(id, nuevoEstado){
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok){ showToast('✅ Estado actualizado'); cargarDestinos(); }
+  }).actualizarDestino({ id, ruta:'_', valorPersona:0, cupo:0, estado:nuevoEstado });
+}
+
+function limpiarForm(){
+  ['dst-id','dst-ruta','dst-valor','dst-cupo','dst-fecha','dst-punto','dst-incluye'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('dst-estado').value='Activo';
+  document.getElementById('form-titulo').textContent='Nuevo Destino';
+}
+
+cargarDestinos();
+</script>
+</body>
+</html>

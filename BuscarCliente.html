@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Plus Jakarta Sans', sans-serif; box-sizing: border-box; }
+  body { background: #f0f4ff; margin:0; padding:.75rem; }
+  input, select, textarea {
+    width:100%; border:1px solid #e5e7eb; border-radius:.75rem;
+    padding:.5rem .75rem; font-size:.875rem; background:#fff;
+    outline:none; font-family:inherit;
+  }
+  input:focus, select:focus { border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2); }
+  .btn-blue { background:linear-gradient(135deg,#1e40af,#3b82f6); color:#fff; border-radius:.75rem; padding:.6rem 1rem; font-size:.875rem; font-weight:700; cursor:pointer; border:none; width:100%; }
+  .btn-gray { background:#f3f4f6; color:#374151; border-radius:.75rem; padding:.55rem 1rem; font-size:.85rem; font-weight:600; cursor:pointer; border:none; width:100%; }
+  .card { background:#fff; border-radius:1rem; padding:.85rem; box-shadow:0 1px 6px rgba(0,0,0,.07); margin-bottom:.6rem; }
+  .badge { font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:9999px; display:inline-block; }
+  .tab-btn { flex:1; padding:.45rem .5rem; font-size:.75rem; font-weight:700; border:none; cursor:pointer; border-radius:.6rem; transition:all .2s; }
+  .tab-btn.active { background:#1e40af; color:#fff; }
+  .tab-btn:not(.active) { background:#f3f4f6; color:#6b7280; }
+  .tag { background:#eff6ff; color:#1d4ed8; font-size:.7rem; font-weight:600; padding:2px 8px; border-radius:9999px; display:inline-block; margin:2px; }
+  .etapa-pill { font-size:.65rem; font-weight:700; padding:3px 9px; border-radius:9999px; }
+  .result-item { cursor:pointer; border:2px solid transparent; transition:all .15s; }
+  .result-item:hover { border-color:#93c5fd; background:#eff6ff; }
+  .toast { position:fixed; top:1rem; left:50%; transform:translateX(-50%); background:#1e40af; color:#fff; padding:.5rem 1.2rem; border-radius:9999px; font-size:.8rem; font-weight:600; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; }
+  .saldo-0 { color:#059669; }
+  .saldo-pos { color:#dc2626; }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- HEADER -->
+<div class="flex items-center gap-2 mb-3">
+  <div class="w-9 h-9 rounded-xl bg-purple-600 flex items-center justify-center text-white text-lg shadow">🔍</div>
+  <div>
+    <h1 class="text-base font-extrabold text-gray-800 leading-tight">Buscar Cliente</h1>
+    <p class="text-xs text-gray-400">Nombre, cédula, celular o email</p>
+  </div>
+</div>
+
+<!-- BUSCADOR -->
+<div class="card mb-3">
+  <div class="flex gap-2">
+    <input type="text" id="q" placeholder="Buscar cliente..." oninput="buscar()">
+    <button onclick="buscar()" class="btn-blue" style="width:auto;padding:.5rem 1rem;">🔍</button>
+  </div>
+</div>
+
+<!-- RESULTADOS -->
+<div id="resultados" class="space-y-2"></div>
+
+<!-- DETALLE CLIENTE -->
+<div id="detalle" class="hidden">
+
+  <!-- Info básica -->
+  <div class="card">
+    <div class="flex justify-between items-start mb-2">
+      <div>
+        <h2 class="text-base font-extrabold text-gray-800" id="det-nombre"></h2>
+        <p class="text-xs text-gray-400" id="det-id"></p>
+      </div>
+      <button onclick="cerrarDetalle()" class="text-gray-400 text-lg font-bold">✕</button>
+    </div>
+    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs" id="det-info"></div>
+    <div class="mt-3 grid grid-cols-2 gap-2">
+      <button onclick="nuevaCotizacion()" class="btn-blue text-xs py-2">📋 Nueva Cotización</button>
+      <button onclick="nuevoPasajero()" class="bg-emerald-600 text-white text-xs font-bold rounded-xl py-2 w-full">👥 Pasajeros</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="flex gap-1 mb-2">
+    <button class="tab-btn active" onclick="switchTab('cotiz',this)">📋 Cotizaciones</button>
+    <button class="tab-btn" onclick="switchTab('reservas',this)">🎫 Reservas</button>
+    <button class="tab-btn" onclick="switchTab('pagos',this)">💳 Pagos</button>
+  </div>
+
+  <!-- Tab cotizaciones -->
+  <div id="tab-cotiz">
+    <div id="lista-cotiz" class="space-y-2"></div>
+  </div>
+
+  <!-- Tab reservas -->
+  <div id="tab-reservas" class="hidden">
+    <div id="lista-reservas" class="space-y-2"></div>
+  </div>
+
+  <!-- Tab pagos -->
+  <div id="tab-pagos" class="hidden">
+    <div id="lista-pagos" class="space-y-2"></div>
+  </div>
+
+</div>
+
+<!-- MINI FORM COTIZACIÓN -->
+<div id="form-cot" class="card hidden">
+  <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Nueva Cotización</p>
+  <div class="space-y-3">
+    <div>
+      <label class="text-xs font-semibold text-gray-500 block mb-1">Destino *</label>
+      <select id="cot-destino" onchange="calcularPreview()">
+        <option value="">Seleccionar...</option>
+      </select>
+    </div>
+    <div>
+      <label class="text-xs font-semibold text-gray-500 block mb-1">Cantidad de personas</label>
+      <input type="number" id="cot-cupos" value="1" min="1" oninput="calcularPreview()">
+    </div>
+    <div id="cot-preview" class="hidden bg-emerald-50 text-emerald-800 text-xs font-bold rounded-lg p-2"></div>
+    <div>
+      <label class="text-xs font-semibold text-gray-500 block mb-1">Notas</label>
+      <textarea id="cot-notas" rows="2" placeholder="Notas adicionales..."></textarea>
+    </div>
+  </div>
+  <div class="mt-3 space-y-2">
+    <button onclick="guardarCotizacion()" class="btn-blue">💾 Guardar Cotización</button>
+    <button onclick="cerrarFormCot()" class="btn-gray">← Cancelar</button>
+  </div>
+</div>
+
+<!-- MINI FORM PASAJERO -->
+<div id="form-pas" class="card hidden">
+  <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Agregar Pasajero</p>
+  <div class="space-y-2">
+    <div>
+      <label class="text-xs font-semibold text-gray-500 block mb-1">Reserva asociada *</label>
+      <select id="pas-reserva"><option value="">Seleccionar...</option></select>
+    </div>
+    <div><label class="text-xs font-semibold text-gray-500 block mb-1">Nombre completo *</label>
+      <input type="text" id="pas-nombre" placeholder="Nombre del pasajero"></div>
+    <div class="grid grid-cols-2 gap-2">
+      <div><label class="text-xs font-semibold text-gray-500 block mb-1">Tipo doc.</label>
+        <select id="pas-tipo"><option>CC</option><option>TI</option><option>PA</option><option>CE</option></select></div>
+      <div><label class="text-xs font-semibold text-gray-500 block mb-1">Número doc. *</label>
+        <input type="text" id="pas-cedula" inputmode="numeric"></div>
+    </div>
+    <div><label class="text-xs font-semibold text-gray-500 block mb-1">Celular</label>
+      <input type="tel" id="pas-celular" inputmode="tel"></div>
+    <div><label class="text-xs font-semibold text-gray-500 block mb-1">Email</label>
+      <input type="email" id="pas-email"></div>
+    <div><label class="text-xs font-semibold text-gray-500 block mb-1">Fecha de nacimiento</label>
+      <input type="date" id="pas-fnac"></div>
+  </div>
+  <div class="mt-3 space-y-2">
+    <button onclick="guardarPasajero()" class="btn-blue">💾 Guardar Pasajero</button>
+    <button onclick="cerrarFormPas()" class="btn-gray">← Cancelar</button>
+  </div>
+</div>
+
+<script>
+const ETAPA_COL = {
+  'Nuevos Interesados':'bg-gray-100 text-gray-600',
+  'Contactados':'bg-blue-100 text-blue-700',
+  'Cotización por Enviar':'bg-yellow-100 text-yellow-700',
+  'Cotización Enviada':'bg-purple-100 text-purple-700',
+  'Seguimiento':'bg-orange-100 text-orange-700',
+  'Separó Cupo':'bg-cyan-100 text-cyan-700',
+  'Pago Completo':'bg-green-100 text-green-700',
+  'Viaje Realizado':'bg-emerald-100 text-emerald-700',
+  'Posventa':'bg-pink-100 text-pink-700'
+};
+
+let clienteActivo = null;
+let destinosCache = [];
+let debounceTimer = null;
+
+function showToast(msg, color='#1e40af'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=color; t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0',2500);
+}
+
+function fmt(n){ return '$'+(Number(n)||0).toLocaleString('es-CO'); }
+
+// ─── BUSCAR ──────────────────────────────────────────────────
+function buscar(){
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(()=>{
+    const q = document.getElementById('q').value.trim();
+    if(q.length < 2){ document.getElementById('resultados').innerHTML=''; return; }
+    google.script.run
+      .withSuccessHandler(renderResultados)
+      .buscarClientes(q);
+  }, 350);
+}
+
+function renderResultados(lista){
+  const c = document.getElementById('resultados');
+  document.getElementById('detalle').classList.add('hidden');
+  document.getElementById('form-cot').classList.add('hidden');
+  document.getElementById('form-pas').classList.add('hidden');
+  if(!lista.length){
+    c.innerHTML=`<div class="text-xs text-gray-400 text-center py-6">Sin resultados. ¿Deseas <button onclick="google.script.run.abrirFormularioCliente()" class="text-blue-600 font-bold underline">crear el cliente</button>?</div>`;
+    return;
+  }
+  c.innerHTML = lista.map(cl=>`
+    <div class="card result-item" onclick="verDetalle('${cl.id}')">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <div class="font-bold text-sm text-gray-800">${cl.nombre}</div>
+          <div class="text-xs text-gray-500">🪪 ${cl.cedula} &nbsp;📱 ${cl.celular}</div>
+          <div class="text-xs text-gray-400 truncate">📍 ${cl.municipio||'–'} &nbsp;🌐 ${cl.origen||'–'}</div>
+        </div>
+        <span class="text-blue-400 text-lg shrink-0">›</span>
+      </div>
+    </div>`).join('');
+}
+
+// ─── VER DETALLE ─────────────────────────────────────────────
+function verDetalle(id){
+  document.getElementById('resultados').innerHTML='';
+  document.getElementById('q').value='';
+
+  google.script.run
+    .withSuccessHandler(c=>{
+      if(!c){ showToast('❗ Cliente no encontrado','#dc2626'); return; }
+      clienteActivo = c;
+      document.getElementById('det-nombre').textContent = c.nombre;
+      document.getElementById('det-id').textContent     = c.id;
+      document.getElementById('det-info').innerHTML = `
+        <span class="text-gray-400">Cédula:</span><span class="font-semibold">${c.cedula}</span>
+        <span class="text-gray-400">Celular:</span><span class="font-semibold">${c.celular}</span>
+        <span class="text-gray-400">Email:</span><span class="font-semibold truncate">${c.email||'–'}</span>
+        <span class="text-gray-400">Municipio:</span><span class="font-semibold">${c.municipio||'–'}</span>
+        <span class="text-gray-400">Origen:</span><span class="font-semibold">${c.origen||'–'}</span>`;
+      document.getElementById('detalle').classList.remove('hidden');
+      cargarHistorial(id);
+      switchTab('cotiz', document.querySelector('.tab-btn'));
+    })
+    .obtenerClientePorId(id);
+}
+
+function cargarHistorial(id){
+  google.script.run
+    .withSuccessHandler(h=>{
+      renderCotizaciones(h.cotizaciones);
+      renderReservas(h.reservas);
+      renderPagos(h.pagos);
+    })
+    .obtenerHistorialCliente(id);
+}
+
+// ─── RENDER COTIZACIONES ─────────────────────────────────────
+function renderCotizaciones(lista){
+  const c = document.getElementById('lista-cotiz');
+  if(!lista.length){ c.innerHTML='<div class="text-xs text-gray-400 text-center py-4">Sin cotizaciones</div>'; return; }
+  const ESTADO_COL = {'Pendiente':'bg-yellow-100 text-yellow-700','Reservada':'bg-emerald-100 text-emerald-700','Cancelada':'bg-red-100 text-red-600'};
+  c.innerHTML = lista.map(ct=>`
+    <div class="card">
+      <div class="flex justify-between items-start">
+        <div class="min-w-0">
+          <div class="text-xs font-bold text-gray-800">✈️ ${ct.destino||'–'}</div>
+          <div class="text-xs text-gray-500">${ct.cupos} persona(s) · ${ct.fecha}</div>
+        </div>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <span class="badge ${ESTADO_COL[ct.estado]||'bg-gray-100 text-gray-600'}">${ct.estado}</span>
+          <span class="text-xs font-bold text-blue-700">${fmt(ct.valor)}</span>
+        </div>
+      </div>
+      <div class="mt-2 flex gap-2">
+        <button onclick="convertirAReserva('${ct.id}','${ct.idDestino||''}',${ct.valor},${ct.cupos})" 
+          class="bg-blue-50 text-blue-700 text-xs font-bold rounded-lg px-2 py-1">🎫 Convertir a Reserva</button>
+      </div>
+    </div>`).join('');
+}
+
+// ─── RENDER RESERVAS ─────────────────────────────────────────
+function renderReservas(lista){
+  const c = document.getElementById('lista-reservas');
+  if(!lista.length){ c.innerHTML='<div class="text-xs text-gray-400 text-center py-4">Sin reservas</div>'; return; }
+  c.innerHTML = lista.map(r=>`
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div class="min-w-0">
+          <div class="text-xs font-bold text-gray-800">✈️ ${r.destino||'–'}</div>
+          <div class="text-xs text-gray-400">Viaje: ${r.fechaViaje||'–'}</div>
+        </div>
+        <span class="etapa-pill ${ETAPA_COL[r.etapa]||'bg-gray-100 text-gray-600'} shrink-0">${r.etapa}</span>
+      </div>
+      <div class="grid grid-cols-3 gap-1 text-center">
+        <div class="bg-gray-50 rounded-lg p-1">
+          <div class="text-xs text-gray-400">Total</div>
+          <div class="text-xs font-bold text-gray-700">${fmt(r.total)}</div>
+        </div>
+        <div class="bg-green-50 rounded-lg p-1">
+          <div class="text-xs text-gray-400">Abonado</div>
+          <div class="text-xs font-bold text-green-700">${fmt(r.abono)}</div>
+        </div>
+        <div class="bg-red-50 rounded-lg p-1">
+          <div class="text-xs text-gray-400">Saldo</div>
+          <div class="text-xs font-bold ${Number(r.saldo)===0?'saldo-0':'saldo-pos'}">${fmt(r.saldo)}</div>
+        </div>
+      </div>
+      <div class="mt-2">
+        <label class="text-xs text-gray-400 font-semibold">Cambiar etapa:</label>
+        <select class="mt-1 text-xs" onchange="cambiarEtapa('${r.id}',this.value)">
+          ${['Nuevos Interesados','Contactados','Cotización por Enviar','Cotización Enviada',
+             'Seguimiento','Separó Cupo','Pago Completo','Viaje Realizado','Posventa']
+            .map(e=>`<option ${e===r.etapa?'selected':''}>${e}</option>`).join('')}
+        </select>
+      </div>
+    </div>`).join('');
+}
+
+// ─── RENDER PAGOS ────────────────────────────────────────────
+function renderPagos(lista){
+  const c = document.getElementById('lista-pagos');
+  if(!lista.length){ c.innerHTML='<div class="text-xs text-gray-400 text-center py-4">Sin pagos registrados</div>'; return; }
+  c.innerHTML = lista.map(p=>`
+    <div class="card">
+      <div class="flex justify-between items-center">
+        <div>
+          <div class="text-xs font-bold text-gray-800">${fmt(p.monto)}</div>
+          <div class="text-xs text-gray-500">${p.metodo||'–'} · ${p.fecha}</div>
+          ${p.ref?`<div class="text-xs text-gray-400">Ref: ${p.ref}</div>`:''}
+        </div>
+        ${p.enlace?`<a href="${p.enlace}" target="_blank" class="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-1 rounded-lg">📎 Ver</a>`:''}
+      </div>
+    </div>`).join('');
+}
+
+// ─── TABS ────────────────────────────────────────────────────
+function switchTab(tab, btn){
+  ['cotiz','reservas','pagos'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab);
+  });
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+// ─── CAMBIAR ETAPA ───────────────────────────────────────────
+function cambiarEtapa(idReserva, etapa){
+  google.script.run
+    .withSuccessHandler(r=>{
+      if(r.ok) showToast('✅ Etapa actualizada: '+etapa,'#059669');
+      else showToast('❗ Error al actualizar','#dc2626');
+    })
+    .actualizarEtapaReserva(idReserva, etapa);
+}
+
+// ─── COTIZACIÓN NUEVA ────────────────────────────────────────
+function nuevaCotizacion(){
+  document.getElementById('detalle').classList.add('hidden');
+  document.getElementById('form-cot').classList.remove('hidden');
+  google.script.run.withSuccessHandler(ds=>{
+    destinosCache = ds;
+    const sel = document.getElementById('cot-destino');
+    sel.innerHTML = '<option value="">Seleccionar destino...</option>' +
+      ds.filter(d=>d.estado==='Activo').map(d=>
+        `<option value="${d.id}" data-vp="${d.valorPersona}">${d.ruta} — ${d.fechaViaje||'sin fecha'} (Cupos: ${d.cuposDisponibles})</option>`
+      ).join('');
+  }).obtenerDestinos();
+}
+
+function calcularPreview(){
+  const sel=document.getElementById('cot-destino');
+  const opt=sel.options[sel.selectedIndex];
+  const cupos=Number(document.getElementById('cot-cupos').value)||1;
+  const vp=Number(opt&&opt.dataset.vp)||0;
+  const prev=document.getElementById('cot-preview');
+  if(vp){ prev.textContent=`💰 ${cupos} × ${fmt(vp)} = ${fmt(vp*cupos)}`; prev.classList.remove('hidden'); }
+  else prev.classList.add('hidden');
+}
+
+function guardarCotizacion(){
+  const idDest=document.getElementById('cot-destino').value;
+  const cupos=Number(document.getElementById('cot-cupos').value)||1;
+  if(!idDest){ showToast('❗ Selecciona un destino','#dc2626'); return; }
+  google.script.run.withSuccessHandler(r=>{
+    showToast('✅ Cotización guardada: '+r.id,'#059669');
+    setTimeout(()=>{ cerrarFormCot(); verDetalle(clienteActivo.id); },1200);
+  }).crearCotizacion({
+    idCliente: clienteActivo.id,
+    idDestino: idDest,
+    cantidadCupos: cupos,
+    notas: document.getElementById('cot-notas').value
+  });
+}
+
+function cerrarFormCot(){
+  document.getElementById('form-cot').classList.add('hidden');
+  document.getElementById('detalle').classList.remove('hidden');
+}
+
+// ─── CONVERTIR COTIZACIÓN A RESERVA ─────────────────────────
+function convertirAReserva(idCot, idDest, total, cupos){
+  if(!confirm('¿Convertir esta cotización en reserva?')) return;
+  google.script.run.withSuccessHandler(r=>{
+    if(r.ok){
+      showToast('✅ Reserva creada: '+r.id,'#059669');
+      setTimeout(()=>{ verDetalle(clienteActivo.id); switchTab('reservas', document.querySelectorAll('.tab-btn')[1]); },1200);
+    } else showToast('❗ Error al crear reserva','#dc2626');
+  }).crearReserva({
+    idCotizacion: idCot,
+    idCliente:    clienteActivo.id,
+    idDestino:    idDest,
+    totalPagar:   total,
+    cantidadCupos:cupos
+  });
+}
+
+// ─── PASAJEROS ───────────────────────────────────────────────
+function nuevoPasajero(){
+  document.getElementById('detalle').classList.add('hidden');
+  document.getElementById('form-pas').classList.remove('hidden');
+  // Cargar reservas del cliente
+  google.script.run.withSuccessHandler(h=>{
+    const sel = document.getElementById('pas-reserva');
+    sel.innerHTML = '<option value="">Seleccionar reserva...</option>' +
+      (h.reservas||[]).map(r=>`<option value="${r.id}">${r.destino||r.id} (${r.fechaViaje||'sin fecha'})</option>`).join('');
+  }).obtenerHistorialCliente(clienteActivo.id);
+}
+
+function guardarPasajero(){
+  const datos = {
+    idReserva:       document.getElementById('pas-reserva').value,
+    idCliente:       clienteActivo.id,
+    nombre:          document.getElementById('pas-nombre').value.trim(),
+    tipoDocumento:   document.getElementById('pas-tipo').value,
+    cedula:          document.getElementById('pas-cedula').value.trim(),
+    celular:         document.getElementById('pas-celular').value.trim(),
+    email:           document.getElementById('pas-email').value.trim(),
+    fechaNacimiento: document.getElementById('pas-fnac').value
+  };
+  if(!datos.idReserva||!datos.nombre||!datos.cedula){
+    showToast('❗ Reserva, nombre y documento son obligatorios','#dc2626'); return;
+  }
+  google.script.run.withSuccessHandler(r=>{
+    showToast('✅ Pasajero registrado','#059669');
+    setTimeout(cerrarFormPas,1200);
+  }).agregarPasajero(datos);
+}
+
+function cerrarFormPas(){
+  document.getElementById('form-pas').classList.add('hidden');
+  document.getElementById('detalle').classList.remove('hidden');
+}
+
+function cerrarDetalle(){
+  clienteActivo=null;
+  document.getElementById('detalle').classList.add('hidden');
+  document.getElementById('q').value='';
+  document.getElementById('resultados').innerHTML='';
+}
+</script>
+</body>
+</html>

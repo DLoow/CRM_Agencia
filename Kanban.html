@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family:'Plus Jakarta Sans',sans-serif; box-sizing:border-box; }
+  body { background:#0f172a; margin:0; overflow:hidden; height:100vh; }
+  .board-wrap { display:flex; gap:.65rem; padding:.65rem; overflow-x:auto; height:calc(100vh - 56px); align-items:flex-start; }
+  .board-wrap::-webkit-scrollbar { height:5px; }
+  .board-wrap::-webkit-scrollbar-thumb { background:#334155; border-radius:9999px; }
+  .column { background:#1e293b; border-radius:1rem; min-width:230px; max-width:230px; display:flex; flex-direction:column; max-height:100%; flex-shrink:0; }
+  .col-header { padding:.6rem .8rem; border-radius:1rem 1rem 0 0; font-size:.7rem; font-weight:800; letter-spacing:.04em; text-transform:uppercase; display:flex; justify-content:space-between; align-items:center; }
+  .cards-area { padding:.45rem; overflow-y:auto; flex:1; }
+  .cards-area::-webkit-scrollbar { width:3px; }
+  .cards-area::-webkit-scrollbar-thumb { background:#334155; border-radius:9999px; }
+  /* Tarjeta seguimiento (SEG-) */
+  .kanban-card { background:#0f172a; border:1px solid #1e293b; border-radius:.75rem; padding:.65rem; margin-bottom:.45rem; cursor:pointer; transition:transform .15s,box-shadow .15s,border-color .15s; }
+  .kanban-card:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,.4); border-color:#3b82f6; }
+  .kanban-card.es-seguimiento { border-left:3px solid #64748b; opacity:.85; }
+  .kanban-card.es-reserva { border-left:3px solid #3b82f6; }
+  /* Modales */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.75); display:flex; align-items:flex-end; justify-content:center; z-index:100; }
+  .modal { background:#1e293b; border-radius:1.25rem 1.25rem 0 0; width:100%; max-width:480px; max-height:92vh; overflow-y:auto; }
+  .modal-header { background:#0f172a; border-radius:1.25rem 1.25rem 0 0; padding:.85rem 1rem; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:1; }
+  .modal-body { padding:1rem; padding-bottom:2rem; }
+  .field-group { margin-bottom:.85rem; }
+  .field-group label { display:block; font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+  .field-group input, .field-group select, .field-group textarea {
+    width:100%; background:#0f172a; border:1px solid #334155; border-radius:.65rem;
+    color:#e2e8f0; padding:.5rem .75rem; font-size:.85rem; outline:none; font-family:inherit;
+  }
+  .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2); }
+  .field-group select option { background:#1e293b; }
+  .btn-action { border-radius:.75rem; padding:.6rem 1rem; font-size:.82rem; font-weight:700; cursor:pointer; border:none; width:100%; margin-bottom:.5rem; }
+  .stat-mini { background:#0f172a; border-radius:.6rem; padding:.4rem .6rem; text-align:center; }
+  .badge-seg { background:#1e293b; color:#64748b; font-size:.6rem; font-weight:700; padding:1px 6px; border-radius:9999px; border:1px solid #334155; }
+  .badge-res { background:#1e3a8a; color:#93c5fd; font-size:.6rem; font-weight:700; padding:1px 6px; border-radius:9999px; }
+  .top-bar { background:#0f172a; border-bottom:1px solid #1e293b; padding:.6rem .85rem; display:flex; align-items:center; gap:.65rem; height:56px; }
+  /* Colores columnas */
+  .col-nuevo .col-header      { background:#1e293b; color:#94a3b8; }
+  .col-contactado .col-header { background:#1e3a8a; color:#93c5fd; }
+  .col-cxenv .col-header      { background:#451a03; color:#fcd34d; }
+  .col-cenviada .col-header   { background:#2e1065; color:#c4b5fd; }
+  .col-seguim .col-header     { background:#431407; color:#fdba74; }
+  .col-separo .col-header     { background:#083344; color:#67e8f9; }
+  .col-pagocmpl .col-header   { background:#052e16; color:#86efac; }
+  .col-realizado .col-header  { background:#022c22; color:#6ee7b7; }
+  .col-posventa .col-header   { background:#500724; color:#f9a8d4; }
+  .new-btn { background:linear-gradient(135deg,#1e40af,#3b82f6); color:#fff; border-radius:.65rem; padding:.4rem .8rem; font-size:.72rem; font-weight:700; cursor:pointer; border:none; white-space:nowrap; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; vertical-align:middle; margin-right:5px; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  /* Aviso tipo toast en modo dark */
+  .dk-toast { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); background:#1e40af; color:#fff; padding:.5rem 1.2rem; border-radius:9999px; font-size:.8rem; font-weight:700; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; min-width:210px; text-align:center; }
+</style>
+</head>
+<body>
+
+<div class="dk-toast" id="dktoast"></div>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <span class="text-lg">📊</span>
+  <div class="flex-1 min-w-0">
+    <h1 class="text-sm font-extrabold text-white leading-tight">Tablero Kanban</h1>
+    <p class="text-xs text-slate-400 truncate" id="total-cards">Cargando...</p>
+  </div>
+  <button onclick="abrirModalNuevo()" class="new-btn">+ Añadir</button>
+  <button onclick="cargarTablero()" class="text-slate-400 text-lg ml-1">⟳</button>
+</div>
+
+<!-- TABLERO -->
+<div class="board-wrap" id="board"></div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- MODAL DETALLE TARJETA                          -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="modal-detalle" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="min-w-0">
+        <h2 class="text-sm font-extrabold text-white truncate" id="md-titulo">–</h2>
+        <div class="flex items-center gap-2 mt-0.5">
+          <p class="text-xs text-slate-400" id="md-id">–</p>
+          <span id="md-tipo-badge"></span>
+        </div>
+      </div>
+      <button onclick="cerrarModal('modal-detalle')" class="text-slate-400 text-2xl font-bold ml-2 shrink-0">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Stats (solo visibles cuando hay reserva real) -->
+      <div id="md-stats" class="grid grid-cols-2 gap-2 text-xs mb-4">
+        <div class="stat-mini"><div class="text-slate-400 mb-1">Total</div><div class="font-extrabold text-white" id="md-total">–</div></div>
+        <div class="stat-mini"><div class="text-slate-400 mb-1">Abonado</div><div class="font-extrabold text-emerald-400" id="md-abono">–</div></div>
+        <div class="stat-mini"><div class="text-slate-400 mb-1">Saldo</div><div class="font-extrabold text-red-400" id="md-saldo">–</div></div>
+        <div class="stat-mini"><div class="text-slate-400 mb-1">Fecha Viaje</div><div class="font-extrabold text-cyan-400" id="md-fecha">–</div></div>
+      </div>
+
+      <!-- Notas -->
+      <div class="field-group">
+        <label>Notas / Info</label>
+        <div class="text-xs text-slate-300 bg-slate-900 rounded-lg p-2 min-h-8" id="md-notas">–</div>
+      </div>
+
+      <!-- Mover etapa -->
+      <div class="field-group">
+        <label>Mover a etapa</label>
+        <select id="md-etapa">
+          <option>Nuevos Interesados</option>
+          <option>Contactados</option>
+          <option>Cotización por Enviar</option>
+          <option>Cotización Enviada</option>
+          <option>Seguimiento</option>
+          <option>Separó Cupo</option>
+          <option>Pago Completo</option>
+          <option>Viaje Realizado</option>
+          <option>Posventa</option>
+        </select>
+      </div>
+
+      <!-- AVISO: mover a Separó Cupo desde SEG- pedirá datos -->
+      <div id="aviso-separo" class="hidden bg-cyan-900 text-cyan-200 text-xs rounded-lg p-2 mb-3">
+        🔒 Al mover a <strong>Separó Cupo</strong> se generará el <strong>ID_Reserva oficial</strong>.
+        Deberás seleccionar destino y monto. Completa los datos abajo antes de guardar.
+      </div>
+
+      <!-- Formulario extra para confirmar reserva (aparece cuando SEG- → Separó Cupo) -->
+      <div id="form-confirmar" class="hidden space-y-3 mb-4 border border-cyan-800 rounded-xl p-3">
+        <p class="text-xs font-bold text-cyan-300 uppercase tracking-wide">Datos de la reserva</p>
+        <div class="field-group">
+          <label>Destino *</label>
+          <select id="conf-destino" onchange="calcConfValor()">
+            <option value="">Seleccionar...</option>
+          </select>
+        </div>
+        <div id="conf-preview" class="hidden text-xs font-bold text-emerald-400 bg-emerald-900 rounded-lg p-2"></div>
+        <div class="field-group">
+          <label>Cotización asociada (opcional)</label>
+          <select id="conf-cotizacion">
+            <option value="">Sin cotización</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Cantidad de cupos *</label>
+          <input type="number" id="conf-cupos" value="1" min="1" oninput="calcConfValor()">
+        </div>
+        <div class="field-group">
+          <label>Total a pagar *</label>
+          <input type="number" id="conf-total" placeholder="0">
+        </div>
+        <div class="field-group">
+          <label>Notas</label>
+          <textarea id="conf-notas" rows="2"></textarea>
+        </div>
+      </div>
+
+      <button onclick="guardarEtapa()" id="btn-guardar-etapa" class="btn-action" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;">💾 Guardar Cambio</button>
+
+      <!-- Sección pagos (solo si es reserva real) -->
+      <div id="seccion-pagos">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">💳 Historial de Pagos</p>
+        <div id="md-pagos" class="space-y-2 text-xs mb-2"></div>
+        <button onclick="abrirModalPago()" class="btn-action" style="background:#052e16;color:#86efac;">💳 Registrar Pago</button>
+      </div>
+
+      <!-- Pasajeros (solo si es reserva real) -->
+      <div id="seccion-pasajeros" class="mt-1">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">👥 Pasajeros</p>
+        <div id="md-pasajeros" class="space-y-1 text-xs"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- MODAL AÑADIR (nuevo cliente o seguimiento)     -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="modal-nuevo" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="text-sm font-extrabold text-white">➕ Añadir al Tablero</h2>
+      <button onclick="cerrarModal('modal-nuevo')" class="text-slate-400 text-2xl font-bold">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label>Buscar cliente existente</label>
+        <div class="flex gap-2">
+          <input type="text" id="nn-buscar" placeholder="Nombre o cédula..."
+                 onkeydown="if(event.key==='Enter') buscarClienteNN()">
+          <button onclick="buscarClienteNN()" style="background:#3b82f6;color:#fff;border:none;border-radius:.65rem;padding:.45rem .8rem;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">Buscar</button>
+        </div>
+        <div id="nn-resultados" class="mt-2 space-y-1"></div>
+        <div id="nn-sel" class="mt-2 bg-blue-900 text-blue-200 text-xs font-bold rounded-lg p-2 hidden"></div>
+      </div>
+      <p class="text-xs text-slate-500 text-center my-2">— o —</p>
+      <button onclick="cerrarModal('modal-nuevo'); google.script.run.abrirFormularioCliente();"
+        class="btn-action" style="background:#1e293b;color:#94a3b8;border:1px solid #334155;">
+        👤 Crear Cliente Nuevo
+      </button>
+      <div id="nn-btn-agregar" class="hidden mt-2">
+        <button onclick="agregarSeguimiento()" class="btn-action" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;">
+          🆕 Añadir a "Nuevos Interesados"
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- MODAL PAGO RÁPIDO                              -->
+<!-- ══════════════════════════════════════════════ -->
+<div id="modal-pago" class="modal-bg hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="text-sm font-extrabold text-white">💳 Registrar Pago</h2>
+      <button onclick="cerrarModal('modal-pago')" class="text-slate-400 text-2xl font-bold">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="bg-slate-900 rounded-lg p-3 text-xs mb-3">
+        <span class="text-slate-400">Reserva: </span><span class="text-white font-bold" id="pago-id-res"></span><br>
+        <span class="text-slate-400">Saldo pendiente: </span><span class="text-red-400 font-bold" id="pago-saldo"></span>
+      </div>
+      <div class="field-group"><label>Monto *</label>
+        <input type="number" id="pago-monto" placeholder="0" inputmode="decimal"></div>
+      <div class="field-group"><label>Método</label>
+        <select id="pago-metodo">
+          <option>Transferencia</option><option>Nequi</option><option>Daviplata</option>
+          <option>Efectivo</option><option>PSE</option><option>Tarjeta débito</option>
+          <option>Tarjeta crédito</option><option>Otro</option>
+        </select></div>
+      <div class="field-group"><label>Fecha</label>
+        <input type="date" id="pago-fecha"></div>
+      <div class="field-group"><label>Referencia</label>
+        <input type="text" id="pago-ref" placeholder="Nro. comprobante"></div>
+      <div class="field-group"><label>📎 Comprobante (imagen/PDF)</label>
+        <input type="file" id="pago-archivo" accept="image/*,application/pdf" style="color:#e2e8f0;"></div>
+      <div class="field-group"><label>Notas</label>
+        <textarea id="pago-notas" rows="2"></textarea></div>
+      <button onclick="guardarPago()" id="btn-pago" class="btn-action" style="background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;">💾 Registrar Pago</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLS = [
+  { key:'Nuevos Interesados',    cls:'col-nuevo',      emoji:'🆕' },
+  { key:'Contactados',           cls:'col-contactado', emoji:'📞' },
+  { key:'Cotización por Enviar', cls:'col-cxenv',      emoji:'📝' },
+  { key:'Cotización Enviada',    cls:'col-cenviada',   emoji:'📨' },
+  { key:'Seguimiento',           cls:'col-seguim',     emoji:'👁️' },
+  { key:'Separó Cupo',           cls:'col-separo',     emoji:'🔒' },
+  { key:'Pago Completo',         cls:'col-pagocmpl',   emoji:'✅' },
+  { key:'Viaje Realizado',       cls:'col-realizado',  emoji:'✈️' },
+  { key:'Posventa',              cls:'col-posventa',   emoji:'⭐' }
+];
+
+let tarjetaActiva  = null;   // objeto completo de la tarjeta activa
+let clienteNNSel   = null;   // cliente seleccionado en modal-nuevo
+let destinosCache  = [];
+
+/* ─── TOAST ────────────────────────────────────────────── */
+function toast(msg, color='#1e40af') {
+  const t = document.getElementById('dktoast');
+  t.textContent = msg; t.style.background = color; t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2800);
+}
+function fmt(n) { return '$' + (Number(n)||0).toLocaleString('es-CO'); }
+function setBtn(id, loading, txt) {
+  const b = document.getElementById(id); if(!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? '<span class="spinner"></span>Guardando...' : txt;
+}
+
+/* ─── CARGAR TABLERO ───────────────────────────────────── */
+function cargarTablero() {
+  document.getElementById('board').innerHTML =
+    '<div class="text-slate-400 text-sm m-6">Cargando tablero...</div>';
+  google.script.run
+    .withSuccessHandler(renderTablero)
+    .withFailureHandler(e => {
+      document.getElementById('board').innerHTML =
+        '<div class="text-red-400 text-sm m-6">Error: ' + e.message + '</div>';
+    })
+    .obtenerReservasPorEtapa();
+}
+
+function renderTablero(tablero) {
+  const total = Object.values(tablero).reduce((s, a) => s + a.length, 0);
+  document.getElementById('total-cards').textContent = total + ' tarjetas';
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  COLS.forEach(col => {
+    const cards = tablero[col.key] || [];
+    const div = document.createElement('div');
+    div.className = 'column ' + col.cls;
+    div.innerHTML = `
+      <div class="col-header">
+        <span>${col.emoji} ${col.key}</span>
+        <span style="background:rgba(255,255,255,.12);color:#fff;font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:9999px;">${cards.length}</span>
+      </div>
+      <div class="cards-area">
+        ${cards.length ? cards.map(renderCard).join('') : '<div style="text-align:center;color:#475569;font-size:.7rem;padding:1.2rem .4rem;">Sin tarjetas</div>'}
+      </div>`;
+    board.appendChild(div);
+  });
+}
+
+function renderCard(r) {
+  const esSeg = !r.esReservaReal;
+  const pct   = r.totalPagar > 0 ? Math.round((r.totalAbono / r.totalPagar) * 100) : 0;
+  const tipoBadge = esSeg
+    ? '<span style="background:#1e293b;color:#64748b;font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:9999px;border:1px solid #334155;">Seguimiento</span>'
+    : '<span style="background:#1e3a8a;color:#93c5fd;font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:9999px;">Reserva</span>';
+
+  return `
+    <div class="kanban-card ${esSeg ? 'es-seguimiento' : 'es-reserva'}"
+         onclick='abrirDetalle(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+      <div class="flex justify-between items-start mb-1 gap-1">
+        <div class="text-xs font-extrabold text-white leading-tight truncate">${r.nombreCliente}</div>
+        ${tipoBadge}
+      </div>
+      ${r.ruta ? `<div class="text-xs text-slate-400 truncate mb-1">✈️ ${r.ruta}</div>` : '<div class="text-xs text-slate-600 mb-1 italic">Sin destino aún</div>'}
+      ${!esSeg ? `
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-slate-400">${fmt(r.totalAbono)}/${fmt(r.totalPagar)}</span>
+          <span class="${Number(r.saldoPendiente)===0?'text-emerald-400':'text-red-400'} font-bold">${fmt(r.saldoPendiente)}</span>
+        </div>
+        <div style="background:#1e293b;border-radius:9999px;height:4px;">
+          <div style="background:${pct===100?'#34d399':'#3b82f6'};border-radius:9999px;height:4px;width:${pct}%;"></div>
+        </div>` : ''}
+    </div>`;
+}
+
+/* ─── ABRIR DETALLE TARJETA ────────────────────────────── */
+function abrirDetalle(r) {
+  tarjetaActiva = r;
+  const esSeg = !r.esReservaReal;
+
+  document.getElementById('md-titulo').textContent = r.nombreCliente + (r.ruta ? ' — ' + r.ruta : '');
+  document.getElementById('md-id').textContent     = r.id;
+  document.getElementById('md-tipo-badge').innerHTML = esSeg
+    ? '<span class="badge-seg">Seguimiento</span>'
+    : '<span class="badge-res">Reserva</span>';
+
+  // Stats
+  document.getElementById('md-total').textContent  = esSeg ? '–' : fmt(r.totalPagar);
+  document.getElementById('md-abono').textContent  = esSeg ? '–' : fmt(r.totalAbono);
+  document.getElementById('md-saldo').textContent  = esSeg ? '–' : fmt(r.saldoPendiente);
+  document.getElementById('md-fecha').textContent  = r.fechaViaje || '–';
+  document.getElementById('md-notas').textContent  = r.notas || '–';
+  document.getElementById('md-etapa').value        = r.etapa;
+
+  // Mostrar/ocultar secciones según tipo
+  document.getElementById('seccion-pagos').style.display    = esSeg ? 'none' : '';
+  document.getElementById('seccion-pasajeros').style.display = esSeg ? 'none' : '';
+  document.getElementById('md-stats').style.display          = esSeg ? 'none' : '';
+
+  // Aviso y form de confirmación ocultos por defecto
+  document.getElementById('aviso-separo').classList.add('hidden');
+  document.getElementById('form-confirmar').classList.add('hidden');
+
+  // Listener para mostrar form de confirmación si es SEG- y elige Separó Cupo
+  const selEtapa = document.getElementById('md-etapa');
+  selEtapa.onchange = () => {
+    const mostrar = esSeg && selEtapa.value === 'Separó Cupo';
+    document.getElementById('aviso-separo').classList.toggle('hidden', !mostrar);
+    document.getElementById('form-confirmar').classList.toggle('hidden', !mostrar);
+    if (mostrar) cargarDestinosConf(r.idCliente);
+  };
+
+  if (!esSeg) {
+    cargarPagosModal(r.id);
+    cargarPasajerosModal(r.id);
+  }
+
+  document.getElementById('modal-detalle').classList.remove('hidden');
+}
+
+function cargarDestinosConf(idCliente) {
+  google.script.run.withSuccessHandler(ds => {
+    destinosCache = ds;
+    const sel = document.getElementById('conf-destino');
+    sel.innerHTML = '<option value="">Seleccionar destino...</option>' +
+      ds.filter(d => d.estado === 'Activo').map(d =>
+        `<option value="${d.id}" data-vp="${d.valorPersona}">${d.ruta} (${d.fechaViaje||'sin fecha'}) — Cupos: ${d.cuposDisponibles}</option>`
+      ).join('');
+  }).obtenerDestinos();
+
+  // Cotizaciones pendientes del cliente
+  google.script.run.withSuccessHandler(cotiz => {
+    const sel = document.getElementById('conf-cotizacion');
+    sel.innerHTML = '<option value="">Sin cotización</option>' +
+      (cotiz || []).filter(c => c.estado === 'Pendiente').map(c =>
+        `<option value="${c.id}">${c.destino||c.id} · ${c.cupos} pax · ${fmt(c.valor)}</option>`
+      ).join('');
+  }).obtenerCotizaciones(idCliente);
+}
+
+function calcConfValor() {
+  const sel  = document.getElementById('conf-destino');
+  const opt  = sel.options[sel.selectedIndex];
+  const vp   = Number(opt && opt.dataset.vp) || 0;
+  const cupos = Number(document.getElementById('conf-cupos').value) || 1;
+  const prev = document.getElementById('conf-preview');
+  if (vp) {
+    const total = vp * cupos;
+    document.getElementById('conf-total').value = total;
+    prev.textContent = `💰 ${cupos} × ${fmt(vp)} = ${fmt(total)}`;
+    prev.classList.remove('hidden');
+  } else {
+    prev.classList.add('hidden');
+  }
+}
+
+/* ─── GUARDAR CAMBIO DE ETAPA ──────────────────────────── */
+function guardarEtapa() {
+  const nuevaEtapa = document.getElementById('md-etapa').value;
+  const esSeg      = !tarjetaActiva.esReservaReal;
+
+  // Caso especial: SEG- → Separó Cupo → necesita confirmar reserva
+  if (esSeg && nuevaEtapa === 'Separó Cupo') {
+    const idDest  = document.getElementById('conf-destino').value;
+    const total   = Number(document.getElementById('conf-total').value);
+    const cupos   = Number(document.getElementById('conf-cupos').value) || 1;
+    if (!idDest)  { toast('❗ Selecciona un destino', '#dc2626'); return; }
+    if (!total)   { toast('❗ Ingresa el total a pagar', '#dc2626'); return; }
+
+    setBtn('btn-guardar-etapa', true, '💾 Guardar Cambio');
+    const datosConf = {
+      idSeguimiento: tarjetaActiva.id,
+      idCliente:     tarjetaActiva.idCliente,
+      idDestino:     idDest,
+      idCotizacion:  document.getElementById('conf-cotizacion').value || '',
+      cantidadCupos: cupos,
+      totalPagar:    total,
+      notas:         document.getElementById('conf-notas').value
+    };
+    google.script.run
+      .withSuccessHandler(r => {
+        setBtn('btn-guardar-etapa', false, '💾 Guardar Cambio');
+        if (r.ok) {
+          toast('✅ Reserva confirmada: ' + r.idReserva, '#059669');
+          cerrarModal('modal-detalle');
+          cargarTablero();
+        } else {
+          toast('❗ ' + (r.error || 'Error al confirmar'), '#dc2626');
+        }
+      })
+      .withFailureHandler(e => {
+        setBtn('btn-guardar-etapa', false, '💾 Guardar Cambio');
+        toast('❗ ' + e.message, '#dc2626');
+      })
+      .confirmarReserva(datosConf);
+    return;
+  }
+
+  // Caso normal: cambio de etapa sin confirmación
+  setBtn('btn-guardar-etapa', true, '💾 Guardar Cambio');
+  google.script.run
+    .withSuccessHandler(r => {
+      setBtn('btn-guardar-etapa', false, '💾 Guardar Cambio');
+      if (r.ok) {
+        toast('✅ Etapa actualizada', '#059669');
+        cerrarModal('modal-detalle');
+        cargarTablero();
+      } else {
+        toast('❗ ' + (r.error || 'Error'), '#dc2626');
+      }
+    })
+    .withFailureHandler(e => {
+      setBtn('btn-guardar-etapa', false, '💾 Guardar Cambio');
+      toast('❗ ' + e.message, '#dc2626');
+    })
+    .actualizarEtapaReserva(tarjetaActiva.id, nuevaEtapa, null);
+}
+
+/* ─── PAGOS Y PASAJEROS ────────────────────────────────── */
+function cargarPagosModal(idRes) {
+  google.script.run.withSuccessHandler(ps => {
+    const c = document.getElementById('md-pagos');
+    if (!ps.length) { c.innerHTML = '<div class="text-slate-500 text-xs">Sin pagos aún</div>'; return; }
+    c.innerHTML = ps.map(p => `
+      <div class="bg-slate-900 rounded-lg p-2 flex justify-between items-center gap-2">
+        <div>
+          <div class="font-bold text-white text-xs">${fmt(p.monto)}</div>
+          <div class="text-slate-400 text-xs">${p.metodo||'–'} · ${p.fecha}${p.ref ? ' · ' + p.ref : ''}</div>
+        </div>
+        ${p.enlace ? `<a href="${p.enlace}" target="_blank" class="text-blue-400 font-bold text-xs shrink-0">📎 Ver</a>` : ''}
+      </div>`).join('');
+  }).obtenerPagosPorReserva(idRes);
+}
+
+function cargarPasajerosModal(idRes) {
+  google.script.run.withSuccessHandler(ps => {
+    const c = document.getElementById('md-pasajeros');
+    if (!ps.length) { c.innerHTML = '<div class="text-slate-500 text-xs">Sin pasajeros</div>'; return; }
+    c.innerHTML = ps.map(p => `
+      <div class="bg-slate-900 rounded-lg p-2 text-xs">
+        <span class="font-bold text-white">${p.nombre}</span>
+        <span class="text-slate-400 ml-2">${p.tipoDocumento||'CC'}: ${p.cedula}</span>
+        ${p.celular ? `<span class="text-slate-400 ml-2">📱 ${p.celular}</span>` : ''}
+      </div>`).join('');
+  }).obtenerPasajerosPorReserva(idRes);
+}
+
+/* ─── MODAL PAGO ───────────────────────────────────────── */
+function abrirModalPago() {
+  if (!tarjetaActiva || !tarjetaActiva.esReservaReal) {
+    toast('❗ Solo se puede pagar sobre una reserva confirmada', '#dc2626'); return;
+  }
+  document.getElementById('pago-id-res').textContent = tarjetaActiva.id;
+  document.getElementById('pago-saldo').textContent  = fmt(tarjetaActiva.saldoPendiente);
+  document.getElementById('pago-monto').value        = '';
+  document.getElementById('pago-ref').value          = '';
+  document.getElementById('pago-notas').value        = '';
+  document.getElementById('pago-archivo').value      = '';
+  document.getElementById('pago-fecha').value        = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-pago').classList.remove('hidden');
+}
+
+function guardarPago() {
+  const monto = Number(document.getElementById('pago-monto').value);
+  if (!monto || monto <= 0) { toast('❗ Ingresa un monto válido', '#dc2626'); return; }
+  const datos = {
+    idReserva:   tarjetaActiva.id,
+    idCliente:   tarjetaActiva.idCliente,
+    montoAbonado:monto,
+    metodoPago:  document.getElementById('pago-metodo').value,
+    referencia:  document.getElementById('pago-ref').value,
+    fechaPago:   document.getElementById('pago-fecha').value,
+    notas:       document.getElementById('pago-notas').value
+  };
+  const file = document.getElementById('pago-archivo').files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      datos.archivoBase64 = e.target.result.split(',')[1];
+      datos.nombreArchivo = file.name;
+      datos.mimeType      = file.type;
+      enviarPago(datos);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    enviarPago(datos);
+  }
+}
+
+function enviarPago(datos) {
+  setBtn('btn-pago', true, '💾 Registrar Pago');
+  google.script.run
+    .withSuccessHandler(r => {
+      setBtn('btn-pago', false, '💾 Registrar Pago');
+      if (r.ok) {
+        toast('✅ Pago registrado', '#059669');
+        cerrarModal('modal-pago');
+        // Actualizar saldo local y recargar detalle
+        tarjetaActiva.totalAbono     = Number(tarjetaActiva.totalAbono)     + datos.montoAbonado;
+        tarjetaActiva.saldoPendiente = Math.max(0, Number(tarjetaActiva.saldoPendiente) - datos.montoAbonado);
+        cargarPagosModal(tarjetaActiva.id);
+        cargarTablero();
+      } else {
+        toast('❗ ' + (r.error || 'Error al pagar'), '#dc2626');
+      }
+    })
+    .withFailureHandler(e => {
+      setBtn('btn-pago', false, '💾 Registrar Pago');
+      toast('❗ ' + e.message, '#dc2626');
+    })
+    .registrarPago(datos);
+}
+
+/* ─── MODAL AÑADIR NUEVO ───────────────────────────────── */
+function abrirModalNuevo() {
+  clienteNNSel = null;
+  document.getElementById('nn-buscar').value      = '';
+  document.getElementById('nn-resultados').innerHTML = '';
+  document.getElementById('nn-sel').classList.add('hidden');
+  document.getElementById('nn-btn-agregar').classList.add('hidden');
+  document.getElementById('modal-nuevo').classList.remove('hidden');
+}
+
+function buscarClienteNN() {
+  const q = document.getElementById('nn-buscar').value.trim();
+  if (q.length < 2) return;
+  google.script.run.withSuccessHandler(lista => {
+    const c = document.getElementById('nn-resultados');
+    if (!lista.length) {
+      c.innerHTML = '<div style="color:#94a3b8;font-size:.72rem;padding:.3rem 0;">Sin resultados</div>'; return;
+    }
+    c.innerHTML = lista.slice(0, 5).map(cl => `
+      <div onclick="selClienteNN('${cl.id}','${cl.nombre.replace(/'/g,"\\'")}','${cl.cedula}')"
+           style="background:#0f172a;border:1px solid #334155;border-radius:.6rem;padding:.45rem .7rem;cursor:pointer;font-size:.78rem;color:#e2e8f0;margin-bottom:.25rem;">
+        <strong>${cl.nombre}</strong> — <span style="color:#94a3b8;">${cl.cedula}</span>
+      </div>`).join('');
+  }).buscarClientes(q);
+}
+
+function selClienteNN(id, nombre, cedula) {
+  clienteNNSel = { id, nombre, cedula };
+  document.getElementById('nn-resultados').innerHTML = '';
+  const lbl = document.getElementById('nn-sel');
+  lbl.textContent = '👤 ' + nombre + ' · ' + cedula;
+  lbl.classList.remove('hidden');
+  document.getElementById('nn-btn-agregar').classList.remove('hidden');
+}
+
+function agregarSeguimiento() {
+  if (!clienteNNSel) return;
+  google.script.run.withSuccessHandler(r => {
+    if (r.ok) {
+      toast('✅ Añadido a Nuevos Interesados', '#059669');
+      cerrarModal('modal-nuevo');
+      cargarTablero();
+    } else {
+      toast('❗ ' + (r.error || 'Error'), '#dc2626');
+    }
+  }).nuevaEntradaSeguimiento(clienteNNSel.id);
+}
+
+/* ─── HELPERS ──────────────────────────────────────────── */
+function cerrarModal(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+['modal-detalle','modal-nuevo','modal-pago'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal(id);
+  });
+});
+
+// Tecla Escape para cerrar
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') ['modal-detalle','modal-nuevo','modal-pago'].forEach(cerrarModal);
+});
+
+cargarTablero();
+</script>
+</body>
+</html>

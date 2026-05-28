@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family:'Plus Jakarta Sans',sans-serif; box-sizing:border-box; }
+  body { background:#f0f4ff; margin:0; padding:.75rem; }
+  input,select,textarea {
+    width:100%; border:1px solid #e5e7eb; border-radius:.75rem;
+    padding:.5rem .75rem; font-size:.875rem; background:#fff;
+    outline:none; font-family:inherit; color:#1e293b;
+  }
+  input:focus,select:focus,textarea:focus { border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2); }
+  .label { display:block; font-size:.7rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.25rem; }
+  .card { background:#fff; border-radius:1rem; padding:.85rem; box-shadow:0 1px 6px rgba(0,0,0,.07); margin-bottom:.65rem; }
+  .btn-blue  { background:linear-gradient(135deg,#1e40af,#3b82f6); color:#fff; border-radius:.75rem; padding:.6rem 1rem; font-size:.875rem; font-weight:700; cursor:pointer; border:none; width:100%; }
+  .btn-green { background:linear-gradient(135deg,#065f46,#10b981); color:#fff; border-radius:.75rem; padding:.6rem 1rem; font-size:.875rem; font-weight:700; cursor:pointer; border:none; width:100%; }
+  .btn-gray  { background:#f3f4f6; color:#374151; border-radius:.75rem; padding:.55rem 1rem; font-size:.875rem; font-weight:600; cursor:pointer; border:none; width:100%; }
+  .toast { position:fixed; top:1rem; left:50%; transform:translateX(-50%); background:#059669; color:#fff; padding:.5rem 1.2rem; border-radius:9999px; font-size:.8rem; font-weight:600; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; min-width:200px; text-align:center; }
+  .res-item { cursor:pointer; border:2px solid transparent; transition:all .15s; border-radius:.75rem; }
+  .res-item:hover { border-color:#60a5fa; background:#eff6ff; }
+  .res-item.selected { border-color:#3b82f6; background:#eff6ff; }
+  .progbar-track { background:#e5e7eb; border-radius:9999px; height:6px; margin-top:4px; }
+  .progbar-fill  { background:linear-gradient(90deg,#3b82f6,#10b981); border-radius:9999px; height:6px; transition:width .4s; }
+  .saldo-0  { color:#059669; font-weight:800; }
+  .saldo-pos { color:#dc2626; font-weight:800; }
+  .file-preview { background:#f8fafc; border:1px dashed #93c5fd; border-radius:.75rem; padding:.5rem; font-size:.75rem; color:#3b82f6; font-weight:600; display:flex; align-items:center; gap:.5rem; }
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
+<!-- HEADER -->
+<div class="flex items-center gap-2 mb-3">
+  <div class="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center text-white text-lg shadow">💳</div>
+  <div>
+    <h1 class="text-base font-extrabold text-gray-800 leading-tight">Registrar Pago</h1>
+    <p class="text-xs text-gray-400">Busca la reserva y registra el abono</p>
+  </div>
+</div>
+
+<!-- PASO 1: BUSCAR RESERVA -->
+<div class="card" id="paso1">
+  <p class="label mb-2">Paso 1 · Buscar reserva o cliente</p>
+  <div class="flex gap-2 mb-2">
+    <input type="text" id="buscar-res" placeholder="Nombre del cliente..." oninput="buscarReservas()">
+  </div>
+  <div id="lista-reservas" class="space-y-2 mt-1 max-h-64 overflow-y-auto"></div>
+</div>
+
+<!-- RESERVA SELECCIONADA -->
+<div class="card hidden" id="info-reserva">
+  <div class="flex justify-between items-start mb-2">
+    <p class="label">Reserva seleccionada</p>
+    <button onclick="limpiarReserva()" class="text-gray-400 text-base font-bold">✕</button>
+  </div>
+  <div id="res-info-body" class="text-xs text-gray-700 space-y-1"></div>
+  <div class="mt-3">
+    <div class="flex justify-between text-xs text-gray-500 mb-1">
+      <span>Progreso de pago</span>
+      <span id="res-pct" class="font-bold text-blue-600">0%</span>
+    </div>
+    <div class="progbar-track"><div class="progbar-fill" id="res-progbar" style="width:0%"></div></div>
+  </div>
+</div>
+
+<!-- PASO 2: FORM PAGO -->
+<div class="card hidden" id="paso2">
+  <p class="label mb-3">Paso 2 · Datos del pago</p>
+  <div class="space-y-3">
+
+    <div>
+      <label class="label">Monto a abonar *</label>
+      <input type="number" id="monto" placeholder="0" inputmode="decimal" oninput="calcularNuevoSaldo()">
+    </div>
+
+    <div id="nuevo-saldo-preview" class="hidden bg-blue-50 text-blue-800 text-xs font-bold rounded-lg p-2"></div>
+
+    <div>
+      <label class="label">Método de pago</label>
+      <select id="metodo">
+        <option>Transferencia bancaria</option>
+        <option>Nequi</option>
+        <option>Daviplata</option>
+        <option>Efectivo</option>
+        <option>PSE</option>
+        <option>Tarjeta débito</option>
+        <option>Tarjeta crédito</option>
+        <option>Otro</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="label">Fecha del pago</label>
+      <input type="date" id="fecha-pago">
+    </div>
+
+    <div>
+      <label class="label">Referencia / Nro. comprobante</label>
+      <input type="text" id="referencia" placeholder="Ej: 2024XXXXXX">
+    </div>
+
+    <div>
+      <label class="label">📎 Comprobante (imagen o PDF)</label>
+      <input type="file" id="archivo" accept="image/*,application/pdf" onchange="previsualizarArchivo(this)">
+      <div id="file-preview" class="hidden mt-2 file-preview">
+        <span>📄</span><span id="file-name"></span>
+        <button onclick="quitarArchivo()" class="ml-auto text-red-400 font-bold text-xs">✕</button>
+      </div>
+    </div>
+
+    <div>
+      <label class="label">Notas</label>
+      <textarea id="notas" rows="2" placeholder="Observaciones del pago..."></textarea>
+    </div>
+  </div>
+
+  <div class="mt-4 space-y-2">
+    <button onclick="guardarPago()" class="btn-green">💾 Registrar Pago</button>
+    <button onclick="limpiarTodo()" class="btn-gray">✕ Cancelar</button>
+  </div>
+</div>
+
+<!-- HISTORIAL RECIENTE -->
+<div class="card hidden" id="historial-section">
+  <p class="label mb-2">Pagos registrados en esta reserva</p>
+  <div id="historial-pagos" class="space-y-2"></div>
+</div>
+
+<script>
+let reservaSeleccionada = null;
+let debTimer = null;
+
+function showToast(msg, color='#059669'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.background=color; t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0',2800);
+}
+function fmt(n){ return '$'+(Number(n)||0).toLocaleString('es-CO'); }
+
+// ─── BUSCAR RESERVAS ─────────────────────────────────────────
+function buscarReservas(){
+  clearTimeout(debTimer);
+  debTimer = setTimeout(()=>{
+    const q = document.getElementById('buscar-res').value.trim().toLowerCase();
+    if(q.length<2){ document.getElementById('lista-reservas').innerHTML=''; return; }
+    google.script.run.withSuccessHandler(rs=>{
+      const filtradas = rs.filter(r=>
+        (r.nombreCliente||'').toLowerCase().includes(q) ||
+        (r.ruta||'').toLowerCase().includes(q) ||
+        (r.id||'').toLowerCase().includes(q)
+      );
+      renderListaReservas(filtradas);
+    }).obtenerReservas();
+  },350);
+}
+
+function renderListaReservas(lista){
+  const c = document.getElementById('lista-reservas');
+  if(!lista.length){ c.innerHTML='<div class="text-xs text-gray-400 text-center py-3">Sin resultados</div>'; return; }
+  c.innerHTML = lista.slice(0,8).map(r=>{
+    const pct = r.totalPagar>0 ? Math.round((r.totalAbono/r.totalPagar)*100) : 0;
+    const saldoCls = Number(r.saldoPendiente)===0 ? 'text-emerald-600' : 'text-red-500';
+    return `
+      <div class="res-item p-2 bg-gray-50 rounded-xl" onclick="seleccionarReserva(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <div class="flex justify-between items-start">
+          <div class="min-w-0">
+            <div class="text-xs font-bold text-gray-800">${r.nombreCliente}</div>
+            <div class="text-xs text-gray-500 truncate">✈️ ${r.ruta||'–'}</div>
+          </div>
+          <div class="text-right shrink-0 ml-2">
+            <div class="text-xs font-bold ${saldoCls}">${fmt(r.saldoPendiente)}</div>
+            <div class="text-xs text-gray-400">${pct}%</div>
+          </div>
+        </div>
+        <div class="progbar-track mt-1"><div class="progbar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function seleccionarReserva(r){
+  reservaSeleccionada = r;
+  document.getElementById('lista-reservas').innerHTML='';
+  document.getElementById('buscar-res').value='';
+
+  const pct = r.totalPagar>0 ? Math.round((r.totalAbono/r.totalPagar)*100) : 0;
+  const saldoCls = Number(r.saldoPendiente)===0 ? 'saldo-0' : 'saldo-pos';
+
+  document.getElementById('res-info-body').innerHTML=`
+    <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+      <span class="text-gray-400">ID Reserva:</span><span class="font-bold">${r.id}</span>
+      <span class="text-gray-400">Cliente:</span><span class="font-bold">${r.nombreCliente}</span>
+      <span class="text-gray-400">Destino:</span><span class="font-bold truncate">${r.ruta||'–'}</span>
+      <span class="text-gray-400">Fecha viaje:</span><span>${r.fechaViaje||'–'}</span>
+      <span class="text-gray-400">Total:</span><span class="font-bold">${fmt(r.totalPagar)}</span>
+      <span class="text-gray-400">Abonado:</span><span class="font-bold text-emerald-600">${fmt(r.totalAbono)}</span>
+      <span class="text-gray-400">Saldo:</span><span class="${saldoCls}">${fmt(r.saldoPendiente)}</span>
+      <span class="text-gray-400">Etapa:</span><span class="font-bold text-blue-600">${r.etapa}</span>
+    </div>`;
+  document.getElementById('res-pct').textContent = pct+'%';
+  document.getElementById('res-progbar').style.width = pct+'%';
+
+  document.getElementById('info-reserva').classList.remove('hidden');
+  document.getElementById('paso2').classList.remove('hidden');
+  document.getElementById('paso1').classList.add('hidden');
+
+  // Fecha por defecto: hoy
+  document.getElementById('fecha-pago').value = new Date().toISOString().split('T')[0];
+
+  // Cargar historial
+  cargarHistorial(r.id);
+}
+
+function calcularNuevoSaldo(){
+  if(!reservaSeleccionada) return;
+  const monto = Number(document.getElementById('monto').value)||0;
+  const nuevoSaldo = Math.max(0, Number(reservaSeleccionada.saldoPendiente) - monto);
+  const prev = document.getElementById('nuevo-saldo-preview');
+  if(monto>0){
+    const color = nuevoSaldo===0 ? 'bg-emerald-50 text-emerald-800' : 'bg-blue-50 text-blue-800';
+    prev.className = `text-xs font-bold rounded-lg p-2 ${color}`;
+    prev.textContent = nuevoSaldo===0
+      ? `✅ Con este pago quedaría saldado completamente`
+      : `Nuevo saldo pendiente: ${fmt(nuevoSaldo)}`;
+    prev.classList.remove('hidden');
+  } else {
+    prev.classList.add('hidden');
+  }
+}
+
+function cargarHistorial(idRes){
+  google.script.run.withSuccessHandler(ps=>{
+    const sec = document.getElementById('historial-section');
+    const c   = document.getElementById('historial-pagos');
+    if(!ps.length){ sec.classList.add('hidden'); return; }
+    sec.classList.remove('hidden');
+    c.innerHTML = ps.map(p=>`
+      <div class="bg-gray-50 rounded-xl p-2 flex justify-between items-center">
+        <div>
+          <div class="text-xs font-bold text-gray-800">${fmt(p.monto)}</div>
+          <div class="text-xs text-gray-500">${p.metodo||'–'} · ${p.fecha} ${p.ref?'· '+p.ref:''}</div>
+        </div>
+        ${p.enlace?`<a href="${p.enlace}" target="_blank" class="bg-blue-50 text-blue-600 text-xs font-bold px-2 py-1 rounded-lg">📎 Ver</a>`:''}
+      </div>`).join('');
+  }).obtenerPagosPorReserva(idRes);
+}
+
+// ─── GUARDAR PAGO ─────────────────────────────────────────────
+function guardarPago(){
+  const monto = Number(document.getElementById('monto').value);
+  if(!monto||monto<=0){ showToast('❗ Ingresa un monto válido','#dc2626'); return; }
+  if(!reservaSeleccionada){ showToast('❗ Selecciona una reserva','#dc2626'); return; }
+
+  const datos = {
+    idReserva:   reservaSeleccionada.id,
+    idCliente:   reservaSeleccionada.idCliente,
+    montoAbonado:monto,
+    metodoPago:  document.getElementById('metodo').value,
+    referencia:  document.getElementById('referencia').value.trim(),
+    fechaPago:   document.getElementById('fecha-pago').value,
+    notas:       document.getElementById('notas').value.trim()
+  };
+
+  const fileInput = document.getElementById('archivo');
+  const file = fileInput.files[0];
+
+  if(file){
+    const reader = new FileReader();
+    reader.onload = e=>{
+      datos.archivoBase64 = e.target.result.split(',')[1];
+      datos.nombreArchivo  = file.name;
+      datos.mimeType       = file.type;
+      enviarPago(datos);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    enviarPago(datos);
+  }
+}
+
+function enviarPago(datos){
+  showToast('⏳ Registrando pago...','#2563eb');
+  google.script.run
+    .withSuccessHandler(r=>{
+      if(r.ok){
+        showToast('✅ Pago registrado correctamente','#059669');
+        // Actualizar saldo localmente
+        reservaSeleccionada.totalAbono    = Number(reservaSeleccionada.totalAbono) + datos.montoAbonado;
+        reservaSeleccionada.saldoPendiente = Math.max(0, Number(reservaSeleccionada.saldoPendiente) - datos.montoAbonado);
+        // Re-render info
+        seleccionarReserva(reservaSeleccionada);
+        // Limpiar form
+        document.getElementById('monto').value     = '';
+        document.getElementById('referencia').value = '';
+        document.getElementById('notas').value      = '';
+        document.getElementById('archivo').value    = '';
+        document.getElementById('file-preview').classList.add('hidden');
+        document.getElementById('nuevo-saldo-preview').classList.add('hidden');
+        if(r.enlace) showToast('📎 Comprobante subido a Drive','#059669');
+      } else {
+        showToast('❗ Error al registrar pago','#dc2626');
+      }
+    })
+    .withFailureHandler(e=>showToast('❗ Error: '+e.message,'#dc2626'))
+    .registrarPago(datos);
+}
+
+// ─── ARCHIVO ─────────────────────────────────────────────────
+function previsualizarArchivo(input){
+  const file = input.files[0];
+  if(!file) return;
+  const prev = document.getElementById('file-preview');
+  document.getElementById('file-name').textContent = file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+  prev.classList.remove('hidden');
+}
+
+function quitarArchivo(){
+  document.getElementById('archivo').value='';
+  document.getElementById('file-preview').classList.add('hidden');
+}
+
+function limpiarReserva(){
+  reservaSeleccionada = null;
+  document.getElementById('info-reserva').classList.add('hidden');
+  document.getElementById('paso2').classList.add('hidden');
+  document.getElementById('historial-section').classList.add('hidden');
+  document.getElementById('paso1').classList.remove('hidden');
+  document.getElementById('buscar-res').value='';
+}
+
+function limpiarTodo(){
+  limpiarReserva();
+  document.getElementById('lista-reservas').innerHTML='';
+}
+</script>
+</body>
+</html>
