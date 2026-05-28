@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family:'Plus Jakarta Sans',sans-serif; box-sizing:border-box; }
+  body { background:#f0f4ff; margin:0; padding:.75rem; }
+  input,select,textarea { width:100%; border:1px solid #e5e7eb; border-radius:.75rem; padding:.5rem .75rem; font-size:.875rem; background:#fff; outline:none; font-family:inherit; color:#1e293b; }
+  input:focus,select:focus,textarea:focus { border-color:#60a5fa; box-shadow:0 0 0 3px rgba(96,165,250,.2); }
+  .btn-blue  { background:linear-gradient(135deg,#1e40af,#3b82f6); color:#fff; border-radius:.75rem; padding:.6rem 1rem; font-size:.875rem; font-weight:700; cursor:pointer; border:none; width:100%; }
+  .btn-green { background:linear-gradient(135deg,#065f46,#10b981); color:#fff; border-radius:.75rem; padding:.6rem 1rem; font-size:.875rem; font-weight:700; cursor:pointer; border:none; width:100%; }
+  .btn-gray  { background:#f3f4f6; color:#374151; border-radius:.75rem; padding:.55rem 1rem; font-size:.875rem; font-weight:600; cursor:pointer; border:none; width:100%; }
+  .card { background:#fff; border-radius:1rem; padding:.9rem; box-shadow:0 1px 6px rgba(0,0,0,.07); margin-bottom:.65rem; }
+  .label { display:block; font-size:.7rem; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.25rem; }
+  .toast { position:fixed; top:1rem; left:50%; transform:translateX(-50%); background:#059669; color:#fff; padding:.5rem 1.4rem; border-radius:9999px; font-size:.8rem; font-weight:700; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; min-width:220px; text-align:center; }
+  .badge-warn { background:#fef9c3; color:#854d0e; font-size:.68rem; font-weight:700; padding:2px 9px; border-radius:9999px; }
+  .badge-ok   { background:#dcfce7; color:#166534; font-size:.68rem; font-weight:700; padding:2px 9px; border-radius:9999px; }
+  .info-grid  { display:grid; grid-template-columns:auto 1fr; gap:.2rem .75rem; font-size:.8rem; }
+  .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; vertical-align:middle; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+
+<!-- HEADER -->
+<div class="flex items-center gap-2 mb-3">
+  <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white text-xl shadow">👤</div>
+  <div>
+    <h1 class="text-base font-extrabold text-gray-800 leading-tight">Añadir Cliente</h1>
+    <p class="text-xs text-gray-400">Verifica primero si ya existe</p>
+  </div>
+</div>
+
+<!-- PASO 1: VERIFICAR CÉDULA -->
+<div class="card" id="paso1">
+  <p class="label mb-2">Paso 1 · Verificar por cédula</p>
+  <div class="flex gap-2">
+    <input type="text" id="cedula-buscar" placeholder="Número de cédula" inputmode="numeric"
+           onkeydown="if(event.key==='Enter') verificarCedula()">
+    <button onclick="verificarCedula()" id="btn-verificar" class="btn-blue" style="width:auto;padding:.5rem 1.1rem;">
+      Verificar
+    </button>
+  </div>
+</div>
+
+<!-- CLIENTE YA EXISTE -->
+<div class="card hidden" id="bloque-existe">
+  <div class="flex items-center justify-between mb-2">
+    <span class="label">Cliente encontrado</span>
+    <span class="badge-warn">⚠️ Ya registrado</span>
+  </div>
+  <div id="info-existente" class="info-grid mb-3"></div>
+  <div class="grid grid-cols-2 gap-2">
+    <button onclick="irACotizacion()" class="btn-blue text-sm">📋 Cotización</button>
+    <button onclick="irANuevaSeguimiento()" class="btn-green text-sm">🔄 Nuevo interés</button>
+  </div>
+  <button onclick="editarExistente()" class="btn-gray mt-2 text-sm">✏️ Editar datos</button>
+  <button onclick="reiniciar()" class="btn-gray mt-2 text-sm">← Nueva búsqueda</button>
+</div>
+
+<!-- FORMULARIO NUEVO CLIENTE -->
+<div class="card hidden" id="bloque-nuevo">
+  <div class="flex items-center justify-between mb-3">
+    <span class="label">Datos del nuevo cliente</span>
+    <span class="badge-ok">✅ Cédula no registrada</span>
+  </div>
+  <div class="space-y-3">
+    <div><label class="label">Nombre completo *</label>
+      <input type="text" id="nombre" placeholder="Ej: María Gómez" autocomplete="name"></div>
+    <div><label class="label">Cédula *</label>
+      <input type="text" id="cedula" inputmode="numeric" readonly style="background:#f9fafb;color:#6b7280;"></div>
+    <div><label class="label">Celular *</label>
+      <input type="tel" id="celular" placeholder="3XXXXXXXXX" inputmode="tel"></div>
+    <div><label class="label">Email</label>
+      <input type="email" id="email" placeholder="correo@ejemplo.com"></div>
+    <div><label class="label">Municipio</label>
+      <input type="text" id="municipio" placeholder="Ciudad de residencia"></div>
+    <div><label class="label">¿Cómo nos conoció?</label>
+      <select id="origen">
+        <option value="">Seleccionar...</option>
+        <option>Instagram</option>
+        <option>Facebook</option>
+        <option>WhatsApp</option>
+        <option>TikTok</option>
+        <option>Referido</option>
+        <option>Llamada</option>
+        <option>Web</option>
+        <option>Otro</option>
+      </select>
+    </div>
+  </div>
+  <div class="mt-4 space-y-2">
+    <button onclick="guardarCliente()" id="btn-guardar" class="btn-green">💾 Guardar y Añadir al Tablero</button>
+    <button onclick="reiniciar()" class="btn-gray">← Cancelar</button>
+  </div>
+  <p class="text-xs text-gray-400 mt-2 text-center">Al guardar, el cliente entra al Kanban en "Nuevos Interesados"</p>
+</div>
+
+<!-- FORM COTIZACIÓN RÁPIDA -->
+<div class="card hidden" id="bloque-cotizacion">
+  <p class="label mb-1">Nueva Cotización</p>
+  <div id="cot-cliente-tag" class="bg-blue-50 text-blue-800 text-xs font-bold rounded-lg p-2 mb-3"></div>
+  <div class="space-y-3">
+    <div><label class="label">Destino *</label>
+      <select id="cot-destino" onchange="calcularValorCot()">
+        <option value="">Cargando...</option>
+      </select>
+    </div>
+    <div><label class="label">Cantidad de personas</label>
+      <input type="number" id="cot-cupos" value="1" min="1" oninput="calcularValorCot()"></div>
+    <div id="cot-preview" class="hidden bg-emerald-50 text-emerald-800 text-xs font-bold rounded-lg p-2"></div>
+    <div><label class="label">Notas</label>
+      <textarea id="cot-notas" rows="2" placeholder="Preferencias, observaciones..."></textarea></div>
+  </div>
+  <div class="mt-3 space-y-2">
+    <button onclick="guardarCotizacion()" class="btn-blue">💾 Guardar Cotización</button>
+    <button onclick="volverACliente()" class="btn-gray">← Volver</button>
+  </div>
+</div>
+
+<script>
+let clienteActual = null;
+let cedulaVerificada = '';
+
+function showToast(msg, color='#059669') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = color; t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2800);
+}
+function fmt(n) { return '$' + (Number(n)||0).toLocaleString('es-CO'); }
+function setLoading(btnId, loading, textoOriginal) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.innerHTML = loading ? '<span class="spinner"></span>Procesando...' : textoOriginal;
+}
+
+// ─── PASO 1: VERIFICAR CÉDULA ────────────────────────────────
+function verificarCedula() {
+  const ced = document.getElementById('cedula-buscar').value.trim();
+  if (!ced) { showToast('❗ Ingresa una cédula', '#dc2626'); return; }
+  cedulaVerificada = ced;
+  setLoading('btn-verificar', true, 'Verificar');
+
+  // Solo consulta, NO crea nada
+  google.script.run
+    .withSuccessHandler(res => {
+      setLoading('btn-verificar', false, 'Verificar');
+      if (res.existe) {
+        clienteActual = res.cliente;
+        mostrarExistente(res.cliente);
+      } else {
+        // Mostrar formulario de creación con cédula prellenada
+        document.getElementById('cedula').value = ced;
+        document.getElementById('bloque-nuevo').classList.remove('hidden');
+        document.getElementById('paso1').classList.add('hidden');
+        setTimeout(() => document.getElementById('nombre').focus(), 100);
+      }
+    })
+    .withFailureHandler(e => {
+      setLoading('btn-verificar', false, 'Verificar');
+      showToast('❗ Error: ' + e.message, '#dc2626');
+    })
+    .verificarCedulaExiste(ced);  // ← función nueva, NO crea nada
+}
+
+// ─── MOSTRAR CLIENTE EXISTENTE ───────────────────────────────
+function mostrarExistente(c) {
+  document.getElementById('paso1').classList.add('hidden');
+  document.getElementById('bloque-nuevo').classList.add('hidden');
+  document.getElementById('bloque-existe').classList.remove('hidden');
+  document.getElementById('info-existente').innerHTML = `
+    <span class="text-gray-400">Nombre:</span><span class="font-bold">${c.nombre}</span>
+    <span class="text-gray-400">Cédula:</span><span>${c.cedula}</span>
+    <span class="text-gray-400">Celular:</span><span>${c.celular}</span>
+    <span class="text-gray-400">Email:</span><span class="truncate">${c.email||'–'}</span>
+    <span class="text-gray-400">Municipio:</span><span>${c.municipio||'–'}</span>
+    <span class="text-gray-400">Origen:</span><span>${c.origen||'–'}</span>`;
+}
+
+// ─── GUARDAR CLIENTE NUEVO ───────────────────────────────────
+function guardarCliente() {
+  const nombre    = document.getElementById('nombre').value.trim();
+  const cedula    = document.getElementById('cedula').value.trim();
+  const celular   = document.getElementById('celular').value.trim();
+  const email     = document.getElementById('email').value.trim();
+  const municipio = document.getElementById('municipio').value.trim();
+  const origen    = document.getElementById('origen').value;
+
+  if (!nombre)  { showToast('❗ El nombre es obligatorio', '#dc2626'); return; }
+  if (!celular) { showToast('❗ El celular es obligatorio', '#dc2626'); return; }
+
+  setLoading('btn-guardar', true, '💾 Guardar y Añadir al Tablero');
+
+  // Llama a crearCliente (función nueva que no mezcla verificar y crear)
+  google.script.run
+    .withSuccessHandler(res => {
+      setLoading('btn-guardar', false, '💾 Guardar y Añadir al Tablero');
+      if (!res.ok && res.existe) {
+        // Raro: la cédula fue registrada entre la verificación y el guardado
+        clienteActual = res.cliente;
+        mostrarExistente(res.cliente);
+        showToast('⚠️ La cédula ya estaba registrada', '#d97706');
+      } else if (res.ok) {
+        clienteActual = res.cliente;
+        showToast('✅ Cliente creado y añadido al Kanban', '#059669');
+        setTimeout(() => {
+          document.getElementById('bloque-nuevo').classList.add('hidden');
+          mostrarExistente(res.cliente);
+        }, 1000);
+      } else {
+        showToast('❗ Error al guardar: ' + (res.error||''), '#dc2626');
+      }
+    })
+    .withFailureHandler(e => {
+      setLoading('btn-guardar', false, '💾 Guardar y Añadir al Tablero');
+      showToast('❗ Error: ' + e.message, '#dc2626');
+    })
+    .crearCliente({ nombre, cedula, celular, email, municipio, origen });
+}
+
+// ─── CLIENTE VUELVE A PREGUNTAR (nuevo interés) ──────────────
+function irANuevaSeguimiento() {
+  if (!clienteActual) return;
+  google.script.run
+    .withSuccessHandler(r => {
+      if (r.ok) showToast('✅ Nueva entrada en el Kanban', '#059669');
+      else showToast('❗ ' + (r.error||'Error'), '#dc2626');
+    })
+    .nuevaEntradaSeguimiento(clienteActual.id);
+}
+
+// ─── EDITAR CLIENTE EXISTENTE ────────────────────────────────
+function editarExistente() {
+  const c = clienteActual;
+  document.getElementById('nombre').value    = c.nombre;
+  document.getElementById('cedula').value    = c.cedula;
+  document.getElementById('celular').value   = c.celular;
+  document.getElementById('email').value     = c.email   || '';
+  document.getElementById('municipio').value = c.municipio|| '';
+  document.getElementById('origen').value    = c.origen  || '';
+
+  // Cambiar botón para que actualice en lugar de crear
+  const btn = document.getElementById('btn-guardar');
+  btn.textContent = '💾 Actualizar Cliente';
+  btn.onclick = actualizarCliente;
+
+  document.getElementById('bloque-existe').classList.add('hidden');
+  document.getElementById('bloque-nuevo').classList.remove('hidden');
+  document.getElementById('paso1').classList.add('hidden');
+}
+
+function actualizarCliente() {
+  setLoading('btn-guardar', true, '💾 Actualizar Cliente');
+  google.script.run
+    .withSuccessHandler(r => {
+      setLoading('btn-guardar', false, '💾 Actualizar Cliente');
+      if (r.ok) {
+        clienteActual.nombre    = document.getElementById('nombre').value.trim();
+        clienteActual.celular   = document.getElementById('celular').value.trim();
+        clienteActual.email     = document.getElementById('email').value.trim();
+        clienteActual.municipio = document.getElementById('municipio').value.trim();
+        clienteActual.origen    = document.getElementById('origen').value;
+        showToast('✅ Datos actualizados', '#059669');
+        setTimeout(() => {
+          document.getElementById('bloque-nuevo').classList.add('hidden');
+          // Restaurar botón
+          const btn = document.getElementById('btn-guardar');
+          btn.textContent = '💾 Guardar y Añadir al Tablero';
+          btn.onclick = guardarCliente;
+          mostrarExistente(clienteActual);
+        }, 900);
+      } else showToast('❗ ' + (r.error||'Error'), '#dc2626');
+    })
+    .actualizarCliente({
+      id:        clienteActual.id,
+      nombre:    document.getElementById('nombre').value.trim(),
+      cedula:    document.getElementById('cedula').value.trim(),
+      celular:   document.getElementById('celular').value.trim(),
+      email:     document.getElementById('email').value.trim(),
+      municipio: document.getElementById('municipio').value.trim(),
+      origen:    document.getElementById('origen').value
+    });
+}
+
+// ─── COTIZACIÓN RÁPIDA ───────────────────────────────────────
+function irACotizacion() {
+  document.getElementById('bloque-existe').classList.add('hidden');
+  document.getElementById('bloque-cotizacion').classList.remove('hidden');
+  document.getElementById('cot-cliente-tag').textContent = '👤 ' + clienteActual.nombre + ' · ' + clienteActual.cedula;
+  google.script.run
+    .withSuccessHandler(ds => {
+      const sel = document.getElementById('cot-destino');
+      const activos = ds.filter(d => d.estado === 'Activo');
+      sel.innerHTML = '<option value="">Seleccionar destino...</option>' +
+        activos.map(d => `<option value="${d.id}" data-vp="${d.valorPersona}">${d.ruta} — ${d.fechaViaje||'sin fecha'} (Cupos: ${d.cuposDisponibles})</option>`).join('');
+    })
+    .obtenerDestinos();
+}
+
+function calcularValorCot() {
+  const sel = document.getElementById('cot-destino');
+  const opt = sel.options[sel.selectedIndex];
+  const cupos = Number(document.getElementById('cot-cupos').value) || 1;
+  const vp = Number(opt && opt.dataset.vp) || 0;
+  const prev = document.getElementById('cot-preview');
+  if (vp) { prev.textContent = `💰 ${cupos} × ${fmt(vp)} = ${fmt(vp * cupos)}`; prev.classList.remove('hidden'); }
+  else prev.classList.add('hidden');
+}
+
+function guardarCotizacion() {
+  const idDest = document.getElementById('cot-destino').value;
+  const cupos  = Number(document.getElementById('cot-cupos').value) || 1;
+  if (!idDest) { showToast('❗ Selecciona un destino', '#dc2626'); return; }
+  google.script.run
+    .withSuccessHandler(r => {
+      showToast('✅ Cotización guardada: ' + r.id, '#059669');
+      setTimeout(volverACliente, 1500);
+    })
+    .crearCotizacion({
+      idCliente:     clienteActual.id,
+      idDestino:     idDest,
+      cantidadCupos: cupos,
+      notas:         document.getElementById('cot-notas').value
+    });
+}
+
+function volverACliente() {
+  document.getElementById('bloque-cotizacion').classList.add('hidden');
+  document.getElementById('bloque-existe').classList.remove('hidden');
+}
+
+// ─── REINICIAR ───────────────────────────────────────────────
+function reiniciar() {
+  clienteActual = null;
+  cedulaVerificada = '';
+  document.getElementById('cedula-buscar').value = '';
+  ['bloque-existe','bloque-nuevo','bloque-cotizacion'].forEach(id =>
+    document.getElementById(id).classList.add('hidden'));
+  document.getElementById('paso1').classList.remove('hidden');
+  // Restaurar botón guardar
+  const btn = document.getElementById('btn-guardar');
+  btn.textContent = '💾 Guardar y Añadir al Tablero';
+  btn.onclick = guardarCliente;
+  document.getElementById('cedula-buscar').focus();
+}
+</script>
+</body>
+</html>
