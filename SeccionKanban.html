@@ -1,0 +1,495 @@
+<style>
+/* Kanban embebido en la SPA - scroll horizontal */
+.sk-wrap{overflow-x:auto;padding:.65rem .65rem 1.5rem;display:flex;gap:.6rem;min-height:calc(100vh - 140px);}
+.sk-wrap::-webkit-scrollbar{height:4px;}
+.sk-wrap::-webkit-scrollbar-thumb{background:#334155;border-radius:9999px;}
+.sk-col{background:#1e293b;border-radius:.9rem;min-width:220px;max-width:220px;display:flex;flex-direction:column;flex-shrink:0;max-height:calc(100vh - 150px);}
+.sk-col-h{padding:.55rem .75rem;border-radius:.9rem .9rem 0 0;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center;}
+.sk-cards{padding:.4rem;overflow-y:auto;flex:1;}
+.sk-cards::-webkit-scrollbar{width:3px;}
+.sk-cards::-webkit-scrollbar-thumb{background:#334155;border-radius:9999px;}
+.sk-card{background:#0f172a;border:1px solid #1e293b;border-radius:.7rem;padding:.6rem;margin-bottom:.4rem;cursor:pointer;transition:transform .15s,border-color .15s;}
+.sk-card:active{transform:scale(.97);border-color:#3b82f6;}
+.sk-card.seg{border-left:3px solid #475569;}
+.sk-card.res{border-left:3px solid #3b82f6;}
+/* Colores columnas */
+.sk-nuevo .sk-col-h{background:#1e293b;color:#94a3b8;}
+.sk-contact .sk-col-h{background:#1e3a8a;color:#93c5fd;}
+.sk-cxenv .sk-col-h{background:#451a03;color:#fcd34d;}
+.sk-cenviada .sk-col-h{background:#2e1065;color:#c4b5fd;}
+.sk-seguim .sk-col-h{background:#431407;color:#fdba74;}
+.sk-separo .sk-col-h{background:#083344;color:#67e8f9;}
+.sk-pagoc .sk-col-h{background:#052e16;color:#86efac;}
+.sk-realiz .sk-col-h{background:#022c22;color:#6ee7b7;}
+.sk-posven .sk-col-h{background:#500724;color:#f9a8d4;}
+/* Modales */
+.sk-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:flex;align-items:flex-end;justify-content:center;}
+.sk-modal{background:#1e293b;border-radius:1.25rem 1.25rem 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.sk-modal-h{background:#0f172a;padding:.8rem 1rem;border-radius:1.25rem 1.25rem 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;}
+.sk-modal-b{padding:1rem 1rem 2rem;}
+.sk-fl{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.3rem;}
+.sk-fl label{font-size:.65rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;}
+.sk-fl input,.sk-fl select,.sk-fl textarea{width:100%;background:#0f172a;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;padding:.45rem .7rem;font-size:.82rem;outline:none;font-family:inherit;box-sizing:border-box;}
+.sk-fl input:focus,.sk-fl select:focus{border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.2);}
+.sk-fl select option{background:#1e293b;}
+.sk-btn{border-radius:.7rem;padding:.55rem .9rem;font-size:.82rem;font-weight:700;cursor:pointer;border:none;width:100%;margin-bottom:.4rem;}
+.sk-btn-blue{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;}
+.sk-btn-teal{background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;}
+.sk-btn-gray{background:#0f172a;color:#94a3b8;border:1px solid #334155;}
+.sk-stat{background:#0f172a;border-radius:.55rem;padding:.4rem .5rem;text-align:center;}
+.sk-spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sksp .7s linear infinite;vertical-align:middle;margin-right:4px;}
+@keyframes sksp{to{transform:rotate(360deg);}}
+.sk-toast{position:fixed;bottom:4.5rem;left:50%;transform:translateX(-50%);background:#1e40af;color:#fff;padding:.4rem 1.1rem;border-radius:9999px;font-size:.78rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+</style>
+
+<div class="sk-toast" id="sk-toast"></div>
+
+<!-- Barra superior del Kanban -->
+<div style="padding:.6rem .85rem;display:flex;align-items:center;gap:.6rem;background:#0f172a;border-bottom:1px solid #1e293b;position:sticky;top:0;z-index:10;">
+  <span style="font-size:.82rem;font-weight:700;color:#f1f5f9;flex:1;" id="sk-count">Cargando...</span>
+  <button onclick="window.skAbrirNuevo()" style="background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;border:none;border-radius:.6rem;padding:.35rem .8rem;font-size:.72rem;font-weight:700;cursor:pointer;">+ Añadir</button>
+  <button onclick="window.skCargar()" style="background:none;border:none;color:#3b82f6;font-size:1.1rem;cursor:pointer;">⟳</button>
+</div>
+
+<!-- Tablero -->
+<div class="sk-wrap" id="sk-board">
+  <div style="display:flex;align-items:center;gap:.5rem;padding:2rem;color:#475569;font-size:.8rem;">
+    <div class="sk-spin" style="border-top-color:#3b82f6;"></div>Cargando tablero...
+  </div>
+</div>
+
+<!-- ═══ MODAL DETALLE ═══ -->
+<div class="sk-modal-bg" id="sk-m-det" style="display:none;">
+  <div class="sk-modal">
+    <div class="sk-modal-h">
+      <div style="min-width:0;">
+        <div style="font-size:.9rem;font-weight:800;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" id="skd-titulo"></div>
+        <div style="font-size:.68rem;color:#475569;display:flex;gap:.4rem;align-items:center;">
+          <span id="skd-id"></span><span id="skd-tipo-badge"></span>
+        </div>
+      </div>
+      <button onclick="window.skCerrar('sk-m-det')" style="background:none;border:none;color:#475569;font-size:1.4rem;cursor:pointer;padding:0;">✕</button>
+    </div>
+    <div class="sk-modal-b">
+      <!-- Stats (solo reservas reales) -->
+      <div id="skd-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.75rem;">
+        <div class="sk-stat"><div style="font-size:.62rem;color:#475569;">Total</div><div style="font-size:.85rem;font-weight:800;color:#f1f5f9;" id="skd-total">–</div></div>
+        <div class="sk-stat"><div style="font-size:.62rem;color:#475569;">Abonado</div><div style="font-size:.85rem;font-weight:800;color:#34d399;" id="skd-abono">–</div></div>
+        <div class="sk-stat"><div style="font-size:.62rem;color:#475569;">Saldo</div><div style="font-size:.85rem;font-weight:800;color:#f87171;" id="skd-saldo">–</div></div>
+        <div class="sk-stat"><div style="font-size:.62rem;color:#475569;">Fecha viaje</div><div style="font-size:.85rem;font-weight:800;color:#67e8f9;" id="skd-fecha">–</div></div>
+      </div>
+
+      <!-- Notas -->
+      <div style="background:#0f172a;border-radius:.6rem;padding:.5rem .7rem;font-size:.78rem;color:#94a3b8;margin-bottom:.75rem;" id="skd-notas">–</div>
+
+      <!-- Mover etapa -->
+      <div class="sk-fl" style="margin-bottom:.5rem;">
+        <label>Mover a etapa</label>
+        <select id="skd-etapa" onchange="window.skCheckSeparo()">
+          <option>Nuevos Interesados</option><option>Contactados</option>
+          <option>Cotización por Enviar</option><option>Cotización Enviada</option>
+          <option>Seguimiento</option><option>Separó Cupo</option>
+          <option>Pago Completo</option><option>Viaje Realizado</option><option>Posventa</option>
+        </select>
+      </div>
+
+      <!-- Aviso Separó Cupo -->
+      <div id="skd-aviso-sep" style="display:none;background:#083344;color:#67e8f9;font-size:.75rem;border-radius:.6rem;padding:.5rem .7rem;margin-bottom:.6rem;">
+        🔒 Al confirmar <strong>Separó Cupo</strong> se generará el <strong>ID_Reserva oficial</strong>. Completa los datos:
+      </div>
+
+      <!-- Form confirmar reserva (aparece solo en SEG- → Separó Cupo) -->
+      <div id="skd-form-conf" style="display:none;border:1px solid #083344;border-radius:.75rem;padding:.75rem;margin-bottom:.6rem;">
+        <div style="font-size:.68rem;font-weight:800;color:#67e8f9;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.6rem;">Datos de la reserva</div>
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          <div class="sk-fl"><label>Destino *</label>
+            <select id="skd-conf-dest" onchange="window.skCalcConf()"><option value="">Seleccionar...</option></select></div>
+          <div id="skd-conf-prev" style="display:none;background:#052e16;color:#86efac;font-size:.72rem;font-weight:700;border-radius:.5rem;padding:.3rem .55rem;"></div>
+          <div class="sk-fl"><label>Cotización asociada (opcional)</label>
+            <select id="skd-conf-cot"><option value="">Sin cotización</option></select></div>
+          <div class="sk-fl"><label>Cantidad de cupos *</label>
+            <input type="number" id="skd-conf-cupos" value="1" min="1" oninput="skCalcConf()"></div>
+          <div class="sk-fl"><label>Total a pagar *</label>
+            <input type="number" id="skd-conf-total" placeholder="0"></div>
+          <div class="sk-fl"><label>Notas</label>
+            <textarea id="skd-conf-notas" rows="2"></textarea></div>
+        </div>
+      </div>
+
+      <button onclick="window.skGuardarEtapa()" id="skd-btn-etapa" class="sk-btn sk-btn-blue">💾 Guardar Cambio</button>
+
+      <!-- Pagos (solo reservas reales) -->
+      <div id="skd-sec-pagos">
+        <div style="font-size:.65rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem;">💳 Pagos</div>
+        <div id="skd-pagos" style="margin-bottom:.4rem;font-size:.78rem;"></div>
+        <button onclick="window.skAbrirPago()" class="sk-btn sk-btn-teal">💳 Registrar Pago</button>
+      </div>
+
+      <!-- Pasajeros (solo reservas reales) -->
+      <div id="skd-sec-pas">
+        <div style="font-size:.65rem;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin:.4rem 0;">👥 Pasajeros</div>
+        <div id="skd-pasajeros" style="font-size:.78rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL PAGO ═══ -->
+<div class="sk-modal-bg" id="sk-m-pago" style="display:none;">
+  <div class="sk-modal">
+    <div class="sk-modal-h">
+      <span style="font-size:.9rem;font-weight:800;color:#f1f5f9;">💳 Registrar Pago</span>
+      <button onclick="window.skCerrar('sk-m-pago')" style="background:none;border:none;color:#475569;font-size:1.4rem;cursor:pointer;">✕</button>
+    </div>
+    <div class="sk-modal-b">
+      <div style="background:#0f172a;border-radius:.6rem;padding:.5rem .7rem;font-size:.78rem;margin-bottom:.75rem;">
+        <span style="color:#64748b;">Reserva: </span><span style="color:#f1f5f9;font-weight:700;" id="skp-id-res"></span><br>
+        <span style="color:#64748b;">Saldo: </span><span style="color:#f87171;font-weight:700;" id="skp-saldo"></span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.55rem;">
+        <div class="sk-fl"><label>Monto *</label><input type="number" id="skp-monto" placeholder="0" inputmode="decimal"></div>
+        <div class="sk-fl"><label>Método</label>
+          <select id="skp-metodo">
+            <option>Transferencia</option><option>Nequi</option><option>Daviplata</option>
+            <option>Efectivo</option><option>PSE</option><option>Tarjeta débito</option>
+            <option>Tarjeta crédito</option><option>Otro</option>
+          </select></div>
+        <div class="sk-fl"><label>Fecha</label><input type="date" id="skp-fecha"></div>
+        <div class="sk-fl"><label>Referencia</label><input type="text" id="skp-ref" placeholder="Nro. comprobante"></div>
+        <div class="sk-fl"><label>📎 Comprobante</label>
+          <input type="file" id="skp-archivo" accept="image/*,application/pdf" style="padding:.35rem;"></div>
+        <div class="sk-fl"><label>Notas</label><textarea id="skp-notas" rows="2"></textarea></div>
+      </div>
+      <div style="margin-top:.75rem;">
+        <button onclick="window.skGuardarPago()" id="skp-btn" class="sk-btn sk-btn-teal">💾 Registrar Pago</button>
+        <button onclick="window.skCerrar('sk-m-pago')" class="sk-btn sk-btn-gray">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL AÑADIR ═══ -->
+<div class="sk-modal-bg" id="sk-m-nuevo" style="display:none;">
+  <div class="sk-modal">
+    <div class="sk-modal-h">
+      <span style="font-size:.9rem;font-weight:800;color:#f1f5f9;">➕ Añadir al Tablero</span>
+      <button onclick="window.skCerrar('sk-m-nuevo')" style="background:none;border:none;color:#475569;font-size:1.4rem;cursor:pointer;">✕</button>
+    </div>
+    <div class="sk-modal-b">
+      <div class="sk-fl" style="margin-bottom:.6rem;">
+        <label>Buscar cliente existente</label>
+        <div style="display:flex;gap:.4rem;">
+          <input type="text" id="skn-buscar" placeholder="Nombre o cédula..."
+                 onkeydown="if(event.key==='Enter')skBuscarN()" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:.6rem;color:#e2e8f0;padding:.45rem .7rem;font-size:.82rem;outline:none;font-family:inherit;">
+          <button onclick="window.skBuscarN()" style="background:#3b82f6;color:#fff;border:none;border-radius:.6rem;padding:.4rem .8rem;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">Buscar</button>
+        </div>
+        <div id="skn-resultados" style="margin-top:.4rem;"></div>
+        <div id="skn-sel" style="display:none;background:#172554;color:#93c5fd;font-size:.78rem;font-weight:700;border-radius:.6rem;padding:.4rem .65rem;margin-top:.3rem;"></div>
+      </div>
+      <div style="text-align:center;font-size:.72rem;color:#475569;margin-bottom:.5rem;">— o —</div>
+      <button onclick="window.skCerrar('sk-m-nuevo');window.irA('cliente');" class="sk-btn sk-btn-gray">👤 Crear Cliente Nuevo</button>
+      <div id="skn-btn-add" style="display:none;margin-top:.3rem;">
+        <button onclick="window.skAgregarSeg()" class="sk-btn sk-btn-blue">🆕 Añadir a "Nuevos Interesados"</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const COLS=[
+    {key:'Nuevos Interesados',   cls:'sk-nuevo',   emoji:'🆕'},
+    {key:'Contactados',          cls:'sk-contact', emoji:'📞'},
+    {key:'Cotización por Enviar',cls:'sk-cxenv',   emoji:'📝'},
+    {key:'Cotización Enviada',   cls:'sk-cenviada',emoji:'📨'},
+    {key:'Seguimiento',          cls:'sk-seguim',  emoji:'👁️'},
+    {key:'Separó Cupo',          cls:'sk-separo',  emoji:'🔒'},
+    {key:'Pago Completo',        cls:'sk-pagoc',   emoji:'✅'},
+    {key:'Viaje Realizado',      cls:'sk-realiz',  emoji:'✈️'},
+    {key:'Posventa',             cls:'sk-posven',  emoji:'⭐'}
+  ];
+
+  let tarjetaAct=null;
+  let clienteNSel=null;
+
+  function skToast(msg,color='#1e40af'){
+    const t=document.getElementById('sk-toast');
+    t.textContent=msg;t.style.background=color;t.style.opacity='1';
+    setTimeout(()=>t.style.opacity='0',2600);
+  }
+  function fmt(n){return '$'+(Number(n)||0).toLocaleString('es-CO');}
+  function skBtn(id,loading,txt){const b=document.getElementById(id);if(!b)return;b.disabled=loading;b.innerHTML=loading?'<span class="sk-spin"></span>Guardando...':txt;}
+
+  // ── Cargar tablero ───────────────────────────────────
+  window.skCargar=function(){
+  const board=document.getElementById('sk-board');
+  board.innerHTML='<div style="display:flex;align-items:center;gap:.5rem;padding:2rem;color:#475569;font-size:.8rem;"><div class="sk-spin" style="border-top-color:#3b82f6;"></div>Cargando...</div>';
+  
+  let timeoutId = setTimeout(() => {
+    board.innerHTML = '<div style="color:#f87171;padding:1.5rem;font-size:.8rem;">⏱️ Timeout: El servidor no responde. Verifica que la hoja de cálculo tenga la pestaña "Reservas" y que el script tenga permisos.</div>';
+  }, 15000);
+    google.script.run
+      .withSuccessHandler(tablero=>{
+        clearTimeout(timeoutId);
+        const total=Object.values(tablero).reduce((s,a)=>s+a.length,0);
+        document.getElementById('sk-count').textContent=total+' tarjetas';
+        board.innerHTML='';
+        COLS.forEach(col=>{
+          const cards=tablero[col.key]||[];
+          const div=document.createElement('div');
+          div.className='sk-col '+col.cls;
+          div.innerHTML=`<div class="sk-col-h"><span>${col.emoji} ${col.key}</span>
+            <span style="background:rgba(255,255,255,.12);color:#fff;font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:9999px;">${cards.length}</span></div>
+            <div class="sk-cards">${cards.length?cards.map(skRenderCard).join(''):
+            '<div style="text-align:center;color:#334155;font-size:.68rem;padding:1rem .4rem;">Sin tarjetas</div>'}</div>`;
+          board.appendChild(div);
+        });
+      })
+      .withFailureHandler(e=>{
+      clearTimeout(timeoutId);
+      board.innerHTML='<div style="color:#f87171;padding:1.5rem;font-size:.8rem;">❌ Error: ' + (e.message || 'No se pudo cargar el tablero') + '</div>';
+    })
+    .obtenerReservasPorEtapa();
+};
+
+  function skRenderCard(r){
+    const esSeg=!r.esReservaReal;
+    const pct=r.totalPagar>0?Math.round((r.totalAbono/r.totalPagar)*100):0;
+    return `<div class="sk-card ${esSeg?'seg':'res'}" onclick='window.skAbrirDet(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.3rem;margin-bottom:.25rem;">
+        <div style="font-size:.78rem;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${r.nombreCliente}</div>
+        <span style="font-size:.55rem;font-weight:700;padding:1px 5px;border-radius:9999px;background:${esSeg?'#1e293b':'#172554'};color:${esSeg?'#475569':'#93c5fd'};flex-shrink:0;">${esSeg?'SEG':'RES'}</span>
+      </div>
+      <div style="font-size:.68rem;color:#475569;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:${esSeg?'0':'.3rem'};">${r.ruta||'Sin destino'}</div>
+      ${!esSeg?`<div style="display:flex;justify-content:space-between;font-size:.68rem;margin-bottom:.2rem;">
+        <span style="color:#64748b;">${fmt(r.totalAbono)}/${fmt(r.totalPagar)}</span>
+        <span style="color:${Number(r.saldoPendiente)===0?'#34d399':'#f87171'};font-weight:700;">${fmt(r.saldoPendiente)}</span>
+      </div>
+      <div style="background:#1e293b;border-radius:9999px;height:3px;">
+        <div style="background:${pct===100?'#34d399':'#3b82f6'};border-radius:9999px;height:3px;width:${pct}%;"></div>
+      </div>`:''}
+    </div>`;
+  }
+
+  // ── Abrir detalle ────────────────────────────────────
+  window.skAbrirDet=function(r){
+    tarjetaAct=r;
+    const esSeg=!r.esReservaReal;
+    document.getElementById('skd-titulo').textContent=r.nombreCliente+(r.ruta?' — '+r.ruta:'');
+    document.getElementById('skd-id').textContent=r.id;
+    document.getElementById('skd-tipo-badge').innerHTML=esSeg
+      ?'<span style="background:#1e293b;color:#64748b;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:9999px;">Seguimiento</span>'
+      :'<span style="background:#172554;color:#93c5fd;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:9999px;">Reserva</span>';
+    document.getElementById('skd-total').textContent=esSeg?'–':fmt(r.totalPagar);
+    document.getElementById('skd-abono').textContent=esSeg?'–':fmt(r.totalAbono);
+    document.getElementById('skd-saldo').textContent=esSeg?'–':fmt(r.saldoPendiente);
+    document.getElementById('skd-fecha').textContent=r.fechaViaje||'–';
+    document.getElementById('skd-notas').textContent=r.notas||'Sin notas';
+    document.getElementById('skd-etapa').value=r.etapa;
+    document.getElementById('skd-stats').style.display=esSeg?'none':'grid';
+    document.getElementById('skd-sec-pagos').style.display=esSeg?'none':'block';
+    document.getElementById('skd-sec-pas').style.display=esSeg?'none':'block';
+    document.getElementById('skd-aviso-sep').style.display='none';
+    document.getElementById('skd-form-conf').style.display='none';
+    document.getElementById('skd-etapa').onchange=window.skCheckSeparo;
+    if(!esSeg){skCargarPagos(r.id);skCargarPas(r.id);}
+    document.getElementById('sk-m-det').style.display='flex';
+  };
+
+  window.skCheckSeparo=function(){
+    const esSeg=!tarjetaAct.esReservaReal;
+    const mostrar=esSeg&&document.getElementById('skd-etapa').value==='Separó Cupo';
+    document.getElementById('skd-aviso-sep').style.display=mostrar?'block':'none';
+    document.getElementById('skd-form-conf').style.display=mostrar?'block':'none';
+    if(mostrar)skCargarDestinosConf();
+  };
+
+  function skCargarDestinosConf(){
+    google.script.run.withSuccessHandler(ds=>{
+      const sel=document.getElementById('skd-conf-dest');
+      sel.innerHTML='<option value="">Seleccionar destino...</option>'+
+        ds.filter(d=>d.estado==='Activo').map(d=>
+          `<option value="${d.id}" data-vp="${d.valorPersona}">${d.ruta} (${d.fechaViaje||'sin fecha'}) — Cupos: ${d.cuposDisponibles}</option>`
+        ).join('');
+    }).obtenerDestinos();
+    google.script.run.withSuccessHandler(cotiz=>{
+      const sel=document.getElementById('skd-conf-cot');
+      sel.innerHTML='<option value="">Sin cotización</option>'+
+        (cotiz||[]).filter(c=>c.estado==='Pendiente').map(c=>
+          `<option value="${c.id}">${c.destino||c.id} · ${c.cupos} pax · ${fmt(c.valor)}</option>`
+        ).join('');
+    }).obtenerCotizaciones(tarjetaAct.idCliente);
+  }
+
+  window.skCalcConf=function(){
+    const sel=document.getElementById('skd-conf-dest');
+    const opt=sel.options[sel.selectedIndex];
+    const vp=Number(opt&&opt.dataset.vp)||0;
+    const cupos=Number(document.getElementById('skd-conf-cupos').value)||1;
+    const prev=document.getElementById('skd-conf-prev');
+    if(vp){
+      document.getElementById('skd-conf-total').value=vp*cupos;
+      prev.textContent=`💰 ${cupos} × ${fmt(vp)} = ${fmt(vp*cupos)}`;
+      prev.style.display='block';
+    } else prev.style.display='none';
+  };
+
+  window.skGuardarEtapa=function(){
+    const etapa=document.getElementById('skd-etapa').value;
+    const esSeg=!tarjetaAct.esReservaReal;
+    if(esSeg&&etapa==='Separó Cupo'){
+      const idDest=document.getElementById('skd-conf-dest').value;
+      const total=Number(document.getElementById('skd-conf-total').value);
+      const cupos=Number(document.getElementById('skd-conf-cupos').value)||1;
+      if(!idDest){skToast('❗ Selecciona un destino','#dc2626');return;}
+      if(!total){skToast('❗ Ingresa el total a pagar','#dc2626');return;}
+      skBtn('skd-btn-etapa',true,'💾 Guardar Cambio');
+      google.script.run
+        .withSuccessHandler(r=>{
+          skBtn('skd-btn-etapa',false,'💾 Guardar Cambio');
+          if(r.ok){skToast('✅ Reserva confirmada: '+r.idReserva,'#059669');skCerrar('sk-m-det');skCargar();}
+          else skToast('❗ '+(r.error||'Error'),'#dc2626');
+        })
+        .confirmarReserva({
+          idSeguimiento:tarjetaAct.id,idCliente:tarjetaAct.idCliente,
+          idDestino:idDest,idCotizacion:document.getElementById('skd-conf-cot').value||'',
+          cantidadCupos:cupos,totalPagar:total,
+          notas:document.getElementById('skd-conf-notas').value
+        });
+      return;
+    }
+    skBtn('skd-btn-etapa',true,'💾 Guardar Cambio');
+    google.script.run
+      .withSuccessHandler(r=>{
+        skBtn('skd-btn-etapa',false,'💾 Guardar Cambio');
+        if(r.ok){skToast('✅ Etapa actualizada','#059669');skCerrar('sk-m-det');skCargar();}
+        else skToast('❗ '+(r.error||'Error'),'#dc2626');
+      })
+      .actualizarEtapaReserva(tarjetaAct.id,etapa,null);
+  };
+
+  // ── Pagos ────────────────────────────────────────────
+  function skCargarPagos(id){
+    google.script.run.withSuccessHandler(ps=>{
+      const c=document.getElementById('skd-pagos');
+      if(!ps.length){c.innerHTML='<div style="color:#475569;font-size:.72rem;margin-bottom:.3rem;">Sin pagos aún</div>';return;}
+      c.innerHTML=ps.map(p=>`<div style="background:#0f172a;border-radius:.55rem;padding:.4rem .6rem;margin-bottom:.3rem;display:flex;justify-content:space-between;align-items:center;gap:.4rem;">
+        <div>
+          <div style="font-weight:700;color:#86efac;font-size:.78rem;">${fmt(p.monto)}</div>
+          <div style="color:#475569;font-size:.68rem;">${p.metodo||'–'} · ${p.fecha}${p.ref?' · '+p.ref:''}</div>
+        </div>
+        ${p.enlace?`<a href="${p.enlace}" target="_blank" style="color:#93c5fd;font-size:.68rem;font-weight:700;text-decoration:none;">📎</a>`:''}
+      </div>`).join('');
+    }).obtenerPagosPorReserva(id);
+  }
+
+  function skCargarPas(id){
+    google.script.run.withSuccessHandler(ps=>{
+      const c=document.getElementById('skd-pasajeros');
+      if(!ps.length){c.innerHTML='<div style="color:#475569;font-size:.72rem;">Sin pasajeros</div>';return;}
+      c.innerHTML=ps.map(p=>`<div style="background:#0f172a;border-radius:.55rem;padding:.35rem .6rem;margin-bottom:.25rem;font-size:.72rem;">
+        <span style="font-weight:700;color:#e2e8f0;">${p.nombre}</span>
+        <span style="color:#475569;margin-left:.4rem;">${p.tipoDocumento||'CC'}: ${p.cedula}</span>
+        ${p.celular?`<span style="color:#475569;margin-left:.3rem;">📱 ${p.celular}</span>`:''}
+      </div>`).join('');
+    }).obtenerPasajerosPorReserva(id);
+  }
+
+  window.skAbrirPago=function(){
+    if(!tarjetaAct||!tarjetaAct.esReservaReal){skToast('❗ Solo en reservas confirmadas','#dc2626');return;}
+    document.getElementById('skp-id-res').textContent=tarjetaAct.id;
+    document.getElementById('skp-saldo').textContent=fmt(tarjetaAct.saldoPendiente);
+    document.getElementById('skp-monto').value='';
+    document.getElementById('skp-ref').value='';
+    document.getElementById('skp-notas').value='';
+    document.getElementById('skp-archivo').value='';
+    document.getElementById('skp-fecha').value=new Date().toISOString().split('T')[0];
+    document.getElementById('sk-m-pago').style.display='flex';
+  };
+
+  window.skGuardarPago=function(){
+    const monto=Number(document.getElementById('skp-monto').value);
+    if(!monto||monto<=0){skToast('❗ Monto inválido','#dc2626');return;}
+    const datos={
+      idReserva:tarjetaAct.id,idCliente:tarjetaAct.idCliente,
+      montoAbonado:monto,metodoPago:document.getElementById('skp-metodo').value,
+      referencia:document.getElementById('skp-ref').value,
+      fechaPago:document.getElementById('skp-fecha').value,
+      notas:document.getElementById('skp-notas').value
+    };
+    const file=document.getElementById('skp-archivo').files[0];
+    skBtn('skp-btn',true,'💾 Registrar Pago');
+    if(file){
+      const r=new FileReader();
+      r.onload=e=>{datos.archivoBase64=e.target.result.split(',')[1];datos.nombreArchivo=file.name;datos.mimeType=file.type;skEnviarPago(datos);};
+      r.readAsDataURL(file);
+    } else skEnviarPago(datos);
+  };
+
+  function skEnviarPago(datos){
+    google.script.run
+      .withSuccessHandler(r=>{
+        skBtn('skp-btn',false,'💾 Registrar Pago');
+        if(r.ok){
+          skToast('✅ Pago registrado','#059669');
+          skCerrar('sk-m-pago');
+          tarjetaAct.totalAbono=(Number(tarjetaAct.totalAbono)||0)+datos.montoAbonado;
+          tarjetaAct.saldoPendiente=Math.max(0,(Number(tarjetaAct.saldoPendiente)||0)-datos.montoAbonado);
+          skCargarPagos(tarjetaAct.id);
+          skCargar();
+        } else skToast('❗ '+(r.error||'Error'),'#dc2626');
+      })
+      .withFailureHandler(e=>{skBtn('skp-btn',false,'💾 Registrar Pago');skToast('❗ '+e.message,'#dc2626');})
+      .registrarPago(datos);
+  }
+
+  // ── Añadir nuevo ─────────────────────────────────────
+  window.skAbrirNuevo=function(){
+    clienteNSel=null;
+    document.getElementById('skn-buscar').value='';
+    document.getElementById('skn-resultados').innerHTML='';
+    document.getElementById('skn-sel').style.display='none';
+    document.getElementById('skn-btn-add').style.display='none';
+    document.getElementById('sk-m-nuevo').style.display='flex';
+  };
+
+  window.skBuscarN=function(){
+    const q=document.getElementById('skn-buscar').value.trim();
+    if(q.length<2)return;
+    google.script.run.withSuccessHandler(lista=>{
+      const c=document.getElementById('skn-resultados');
+      if(!lista.length){c.innerHTML='<div style="color:#64748b;font-size:.72rem;padding:.3rem 0;">Sin resultados</div>';return;}
+      c.innerHTML=lista.slice(0,4).map(cl=>`
+        <div onclick="window.skSelN('${cl.id}','${cl.nombre.replace(/'/g,"\\'")}','${cl.cedula}')"
+          style="background:#0f172a;border:1px solid #334155;border-radius:.55rem;padding:.4rem .65rem;cursor:pointer;font-size:.78rem;color:#e2e8f0;margin-bottom:.25rem;">
+          <strong>${cl.nombre}</strong> — <span style="color:#64748b;">${cl.cedula}</span>
+        </div>`).join('');
+    }).buscarClientes(q);
+  };
+
+  window.skSelN=function(id,nombre,cedula){
+    clienteNSel={id,nombre,cedula};
+    document.getElementById('skn-resultados').innerHTML='';
+    const lbl=document.getElementById('skn-sel');
+    lbl.textContent='👤 '+nombre+' · '+cedula;
+    lbl.style.display='block';
+    document.getElementById('skn-btn-add').style.display='block';
+  };
+
+  window.skAgregarSeg=function(){
+    if(!clienteNSel)return;
+    google.script.run.withSuccessHandler(r=>{
+      if(r.ok){skToast('✅ Añadido al tablero','#059669');window.skCerrar('sk-m-nuevo');window.skCargar();}
+      else skToast('❗ '+(r.error||'Error'),'#dc2626');
+    }).nuevaEntradaSeguimiento(clienteNSel.id);
+  };
+
+  // ── Cerrar modales ────────────────────────────────────
+  window.skCerrar=function(id){document.getElementById(id).style.display='none';};
+  ['sk-m-det','sk-m-pago','sk-m-nuevo'].forEach(id=>{
+    document.getElementById(id).addEventListener('click',function(e){if(e.target===this)skCerrar(id);});
+  });
+
+  skCargar();
+})();
+</script>

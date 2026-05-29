@@ -8,29 +8,38 @@
 
 // Obtener todas las entradas del tablero (seguimientos + reservas reales)
 function obtenerReservas() {
-  const ss   = SpreadsheetApp.getActiveSpreadsheet();
-  const hoja = ss.getSheetByName(CONFIG.SHEETS.RESERVAS);
-  if (!hoja) return [];
-  const filas = hoja.getDataRange().getValues().slice(1);
-  return filas.filter(f => f[0]).map((f, idx) => ({
-    fila:          idx + 2,
-    id:            f[0],
-    idCotizacion:  f[1],
-    idCliente:     f[2],
-    nombreCliente: f[3],
-    idDestino:     f[4],
-    ruta:          f[5],
-    fechaViaje:    f[6],
-    etapa:         f[7],
-    totalPagar:    f[8],
-    totalAbono:    f[9],
-    saldoPendiente:f[10],
-    fechaReserva:  f[11],
-    notas:         f[12],
-    // Indica si ya es reserva real (ID_Reserva) o solo seguimiento (SEG-)
-    esReservaReal: !String(f[0]).startsWith('SEG-')
-  }));
+  try {
+    const ss   = SpreadsheetApp.getActiveSpreadsheet();
+    const hoja = ss.getSheetByName(CONFIG.SHEETS.RESERVAS);
+    if (!hoja) return [];
+    const datos = hoja.getDataRange().getValues();
+    if (datos.length <= 1) return [];
+    const filas = datos.slice(1);
+    return filas
+      .filter(f => f[0] && f[0].toString().trim() !== '')
+      .map((f, idx) => ({
+        fila: idx + 2,
+        id: f[0].toString(),
+        idCotizacion: f[1] ? f[1].toString() : '',
+        idCliente: f[2] ? f[2].toString() : '',
+        nombreCliente: f[3] ? f[3].toString() : '',
+        idDestino: f[4] ? f[4].toString() : '',
+        ruta: f[5] ? f[5].toString() : '',
+        fechaViaje: f[6] ? (f[6] instanceof Date ? f[6].toLocaleDateString('es-CO') : f[6].toString()) : '',
+        etapa: f[7] ? f[7].toString() : 'Nuevos Interesados',
+        totalPagar: Number(f[8]) || 0,
+        totalAbono: Number(f[9]) || 0,
+        saldoPendiente: Number(f[10]) || 0,
+        fechaReserva: f[11] ? (f[11] instanceof Date ? f[11].toLocaleDateString('es-CO') : f[11].toString()) : '',
+        notas: f[12] ? f[12].toString() : '',
+        esReservaReal: !String(f[0]).startsWith('SEG-')
+      }));
+  } catch (e) {
+    console.error('Error en obtenerReservas:', e);
+    return [];
+  }
 }
+
 
 // Actualizar etapa en el tablero
 // Cuando llega a "Separó Cupo" y es un SEG-, se convierte en reserva real
@@ -62,15 +71,22 @@ function actualizarEtapaReserva(idActual, nuevaEtapa, datosConfirmacion) {
 }
 
 function obtenerReservasPorEtapa() {
-  const reservas = obtenerReservas();
-  const tablero  = {};
-  CONFIG.ETAPAS.forEach(e => tablero[e] = []);
-  reservas.forEach(r => {
-    const etapa = r.etapa || 'Nuevos Interesados';
-    if (tablero[etapa]) tablero[etapa].push(r);
-    else tablero['Nuevos Interesados'].push(r);
-  });
-  return tablero;
+  try {
+    const reservas = obtenerReservas();
+    const tablero = {};
+    CONFIG.ETAPAS.forEach(e => tablero[e] = []);
+    reservas.forEach(r => {
+      const etapa = r.etapa || 'Nuevos Interesados';
+      if (tablero[etapa]) tablero[etapa].push(r);
+      else tablero['Nuevos Interesados'].push(r);
+    });
+    return tablero;
+  } catch (e) {
+    console.error('Error en obtenerReservasPorEtapa:', e);
+    const vacio = {};
+    CONFIG.ETAPAS.forEach(e => vacio[e] = []);
+    return vacio;
+  }
 }
 
 // Agregar nueva entrada de seguimiento para un cliente que vuelve a preguntar
@@ -201,24 +217,25 @@ function subirComprobanteDrive(base64Data, nombreArchivo, mimeType, idPago) {
 
 // ─── RESUMEN GENERAL ─────────────────────────────────────
 function obtenerResumenGeneral() {
-  const ss        = SpreadsheetApp.getActiveSpreadsheet();
-  const hClientes = ss.getSheetByName(CONFIG.SHEETS.CLIENTES);
-  const hCotiz    = ss.getSheetByName(CONFIG.SHEETS.COTIZACIONES);
-  const hReservas = ss.getSheetByName(CONFIG.SHEETS.RESERVAS);
-  const hPagos    = ss.getSheetByName(CONFIG.SHEETS.PAGOS);
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const hClientes = ss.getSheetByName(CONFIG.SHEETS.CLIENTES);
+    const hCotiz = ss.getSheetByName(CONFIG.SHEETS.COTIZACIONES);
+    const hReservas = ss.getSheetByName(CONFIG.SHEETS.RESERVAS);
+    const hPagos = ss.getSheetByName(CONFIG.SHEETS.PAGOS);
 
-  const totalClientes = Math.max(0, hClientes.getLastRow() - 1);
-  const totalCotiz    = Math.max(0, hCotiz.getLastRow() - 1);
+    const totalClientes = Math.max(0, hClientes.getLastRow() - 1);
+    const totalCotiz = Math.max(0, hCotiz.getLastRow() - 1);
 
-  // Solo contar reservas reales (no seguimientos SEG-)
-  const filasRes = hReservas.getDataRange().getValues().slice(1).filter(f => f[0]);
-  const totalReservas  = filasRes.filter(f => !String(f[0]).startsWith('SEG-')).length;
-  const totalSeguim    = filasRes.filter(f => String(f[0]).startsWith('SEG-')).length;
+    const filasRes = hReservas.getDataRange().getValues().slice(1).filter(f => f[0]);
+    const totalReservas = filasRes.filter(f => !String(f[0]).startsWith('SEG-')).length;
 
-  let totalRecaudado = 0;
-  let totalPendiente = 0;
-  hPagos.getDataRange().getValues().slice(1).forEach(f => { totalRecaudado += Number(f[5]) || 0; });
-  filasRes.forEach(f => { totalPendiente += Number(f[10]) || 0; });
+    let totalRecaudado = 0;
+    hPagos.getDataRange().getValues().slice(1).forEach(f => { totalRecaudado += Number(f[5]) || 0; });
 
-  return { totalClientes, totalCotiz, totalReservas, totalSeguim, totalRecaudado, totalPendiente };
+    return { totalClientes, totalCotiz, totalReservas, totalRecaudado };
+  } catch (e) {
+    console.error('Error en obtenerResumenGeneral:', e);
+    return { totalClientes: 0, totalCotiz: 0, totalReservas: 0, totalRecaudado: 0 };
+  }
 }

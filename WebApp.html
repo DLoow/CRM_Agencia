@@ -7,209 +7,158 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>CRM Agencia de Viajes</title>
 <style>
-  * { font-family:'Plus Jakarta Sans',sans-serif; box-sizing:border-box; }
-  body { background:#0f172a; margin:0; min-height:100vh; padding-bottom:80px; }
-  .stat-card { background:#1e293b; border-radius:1rem; padding:.85rem; transition:transform .2s; }
-  .stat-card:active { transform:scale(.97); }
-  .nav-btn { display:flex; flex-direction:column; align-items:center; gap:.3rem; padding:.75rem .5rem;
-             background:#1e293b; border-radius:1.1rem; cursor:pointer; transition:all .15s;
-             border:2px solid transparent; text-decoration:none; color:inherit; }
-  .nav-btn:active { border-color:#3b82f6; background:#172554; }
-  .nav-btn .ico { font-size:1.6rem; line-height:1; }
-  .nav-btn .lbl { font-size:.65rem; font-weight:700; color:#94a3b8; text-align:center; line-height:1.2; }
-  .res-card { background:#1e293b; border-radius:.85rem; padding:.75rem; margin-bottom:.5rem;
-              border-left:3px solid #334155; }
-  .res-card.real { border-left-color:#3b82f6; }
-  .res-card.seg  { border-left-color:#475569; }
-  .etapa-pill { font-size:.6rem; font-weight:700; padding:2px 7px; border-radius:9999px; display:inline-block; }
-  .prog-track { background:#334155; border-radius:9999px; height:4px; margin-top:4px; }
-  .prog-fill  { background:#3b82f6; border-radius:9999px; height:4px; }
-  .section-title { font-size:.65rem; font-weight:800; color:#64748b; text-transform:uppercase;
-                   letter-spacing:.06em; margin-bottom:.6rem; }
-  .toast { position:fixed; bottom:5rem; left:50%; transform:translateX(-50%);
-           background:#1e40af; color:#fff; padding:.45rem 1.2rem; border-radius:9999px;
-           font-size:.8rem; font-weight:700; z-index:999; opacity:0; transition:opacity .3s;
-           pointer-events:none; white-space:nowrap; }
-  .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#0f172a;
-                border-top:1px solid #1e293b; display:flex; z-index:50; }
-  .bnav-item { flex:1; display:flex; flex-direction:column; align-items:center;
-               padding:.5rem .25rem; cursor:pointer; gap:.15rem; text-decoration:none; color:inherit; }
-  .bnav-item .bi { font-size:1.2rem; }
-  .bnav-item .bt { font-size:.58rem; font-weight:700; color:#64748b; }
-  .bnav-item.active .bt { color:#3b82f6; }
-  .spinner { display:inline-block; width:20px; height:20px; border:3px solid rgba(255,255,255,.2);
-             border-top-color:#3b82f6; border-radius:50%; animation:sp .8s linear infinite; }
-  @keyframes sp { to { transform:rotate(360deg); } }
+*{font-family:'Plus Jakarta Sans',system-ui,sans-serif;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:#0f172a;min-height:100vh;overflow-x:hidden;}
+/* Secciones */
+.seccion{display:none;min-height:calc(100vh - 118px);padding-bottom:8px;}
+.seccion.activa{display:block;}
+/* Header */
+.app-header{background:#0a1120;border-bottom:1px solid #1e293b;padding:.7rem 1rem;
+  position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;gap:.65rem;height:56px;}
+.hdr-icon{width:34px;height:34px;border-radius:.65rem;background:linear-gradient(135deg,#1e40af,#3b82f6);
+  display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;}
+.hdr-title{flex:1;min-width:0;}
+.hdr-title h1{color:#f1f5f9;font-size:.95rem;font-weight:800;margin:0;line-height:1.2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hdr-title p{color:#475569;font-size:.7rem;margin:0;}
+.refresh-btn{background:none;border:none;color:#3b82f6;font-size:1.3rem;cursor:pointer;padding:.2rem;}
+/* Contenido */
+#spa-contenido{margin-top:56px;margin-bottom:62px;overflow-y:auto;}
+/* Bottom nav */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#0a1120;
+  border-top:1px solid #1e293b;display:flex;z-index:100;height:62px;}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.12rem;cursor:pointer;background:none;border:none;padding:.3rem .1rem;position:relative;}
+.bnav-btn .bi{font-size:1.2rem;line-height:1;}
+.bnav-btn .bt{font-size:.58rem;font-weight:700;color:#475569;transition:color .15s;}
+.bnav-btn.active .bt{color:#3b82f6;}
+.bnav-btn.active::after{content:'';position:absolute;top:0;left:15%;right:15%;
+  height:2px;background:#3b82f6;border-radius:0 0 3px 3px;}
+/* Spinner */
+#spa-loading{display:flex;flex-direction:column;align-items:center;
+  justify-content:center;min-height:60vh;gap:.75rem;}
+.spinner-lg{width:36px;height:36px;border:4px solid rgba(59,130,246,.15);
+  border-top-color:#3b82f6;border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
 </style>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div id="toast" class="toast"></div>
-
-<!-- HEADER -->
-<div style="background:#0f172a;border-bottom:1px solid #1e293b;padding:.75rem 1rem;position:sticky;top:0;z-index:40;">
-  <div class="flex items-center gap-2">
-    <div style="background:linear-gradient(135deg,#1e40af,#3b82f6);width:36px;height:36px;border-radius:.75rem;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">✈️</div>
-    <div>
-      <div class="text-white font-extrabold text-sm leading-tight">CRM Agencia de Viajes</div>
-      <div class="text-xs" style="color:#64748b;">Panel principal</div>
-    </div>
-    <button onclick="cargarDatos()" style="margin-left:auto;background:none;border:none;color:#3b82f6;font-size:1.2rem;cursor:pointer;">⟳</button>
+<!-- Header fijo -->
+<div class="app-header">
+  <div class="hdr-icon">✈️</div>
+  <div class="hdr-title">
+    <h1 id="hdr-title">CRM Agencia de Viajes</h1>
+    <p  id="hdr-sub">Panel principal</p>
   </div>
+  <button class="refresh-btn" onclick="refrescarSeccion()" title="Actualizar">⟳</button>
 </div>
 
-<div style="padding:.85rem;">
+<!-- Área de contenido -->
+<div id="spa-contenido">
 
-  <!-- STATS -->
-  <div class="section-title">Resumen</div>
-  <div id="stats-area" style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.25rem;">
-    <div class="stat-card" style="display:flex;align-items:center;justify-content:center;min-height:60px;">
-      <div class="spinner"></div>
-    </div>
-    <div class="stat-card" style="display:flex;align-items:center;justify-content:center;min-height:60px;">
-      <div class="spinner"></div>
-    </div>
-    <div class="stat-card" style="display:flex;align-items:center;justify-content:center;min-height:60px;">
-      <div class="spinner"></div>
-    </div>
-    <div class="stat-card" style="display:flex;align-items:center;justify-content:center;min-height:60px;">
-      <div class="spinner"></div>
-    </div>
+  <div id="spa-loading">
+    <div class="spinner-lg"></div>
+    <div style="color:#475569;font-size:.82rem;">Iniciando CRM...</div>
   </div>
 
-  <!-- ACCIONES RÁPIDAS -->
-  <div class="section-title">Acciones rápidas</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;margin-bottom:1.25rem;">
-    <a href="?page=cliente" class="nav-btn">
-      <span class="ico">➕</span><span class="lbl">Añadir Cliente</span>
-    </a>
-    <a href="?page=buscar" class="nav-btn">
-      <span class="ico">🔍</span><span class="lbl">Buscar Cliente</span>
-    </a>
-    <a href="?page=kanban" class="nav-btn">
-      <span class="ico">📊</span><span class="lbl">Tablero Kanban</span>
-    </a>
-    <a href="?page=pago" class="nav-btn">
-      <span class="ico">💳</span><span class="lbl">Registrar Pago</span>
-    </a>
-    <a href="?page=destino" class="nav-btn">
-      <span class="ico">🗺️</span><span class="lbl">Destinos</span>
-    </a>
-    <div class="nav-btn" onclick="cargarDatos()">
-      <span class="ico">🔄</span><span class="lbl">Actualizar</span>
-    </div>
+  <!-- HOME -->
+  <div class="seccion" id="sec-home">
+    <?!= include('SeccionHome') ?>
   </div>
 
-  <!-- ÚLTIMAS TARJETAS DEL TABLERO -->
-  <div class="section-title">Últimas actividades</div>
-  <div id="ultimas-area">
-    <div style="text-align:center;padding:2rem 0;">
-      <div class="spinner" style="margin:0 auto;"></div>
-      <div style="color:#475569;font-size:.75rem;margin-top:.5rem;">Cargando...</div>
-    </div>
+  <!-- BUSCAR -->
+  <div class="seccion" id="sec-buscar">
+    <?!= include('SeccionBuscar') ?>
+  </div>
+
+  <!-- KANBAN -->
+  <div class="seccion" id="sec-kanban">
+    <?!= include('SeccionKanban') ?>
+  </div>
+
+  <!-- PAGO -->
+  <div class="seccion" id="sec-pago">
+    <?!= include('SeccionPago') ?>
+  </div>
+
+  <!-- CLIENTE -->
+  <div class="seccion" id="sec-cliente">
+    <?!= include('SeccionCliente') ?>
+  </div>
+
+  <!-- DESTINO -->
+  <div class="seccion" id="sec-destino">
+    <?!= include('SeccionDestino') ?>
   </div>
 
 </div>
 
-<!-- BOTTOM NAV -->
+<!-- Bottom Nav -->
 <nav class="bottom-nav">
-  <a href="?page=home"    class="bnav-item active"><span class="bi">🏠</span><span class="bt">Inicio</span></a>
-  <a href="?page=buscar"  class="bnav-item"><span class="bi">🔍</span><span class="bt">Buscar</span></a>
-  <a href="?page=kanban"  class="bnav-item"><span class="bi">📊</span><span class="bt">Kanban</span></a>
-  <a href="?page=pago"    class="bnav-item"><span class="bi">💳</span><span class="bt">Pago</span></a>
-  <a href="?page=cliente" class="bnav-item"><span class="bi">➕</span><span class="bt">Cliente</span></a>
+  <button class="bnav-btn" id="nav-home"    onclick="navegarA('home')">
+    <span class="bi">🏠</span><span class="bt">Inicio</span>
+  </button>
+  <button class="bnav-btn" id="nav-buscar"  onclick="navegarA('buscar')">
+    <span class="bi">🔍</span><span class="bt">Buscar</span>
+  </button>
+  <button class="bnav-btn" id="nav-kanban"  onclick="navegarA('kanban')">
+    <span class="bi">📊</span><span class="bt">Kanban</span>
+  </button>
+  <button class="bnav-btn" id="nav-pago"    onclick="navegarA('pago')">
+    <span class="bi">💳</span><span class="bt">Pago</span>
+  </button>
+  <button class="bnav-btn" id="nav-cliente" onclick="navegarA('cliente')">
+    <span class="bi">➕</span><span class="bt">Cliente</span>
+  </button>
 </nav>
 
 <script>
-const ETAPA_COL = {
-  'Nuevos Interesados':'background:#1e293b;color:#94a3b8',
-  'Contactados':'background:#1e3a8a;color:#93c5fd',
-  'Cotización por Enviar':'background:#451a03;color:#fcd34d',
-  'Cotización Enviada':'background:#2e1065;color:#c4b5fd',
-  'Seguimiento':'background:#431407;color:#fdba74',
-  'Separó Cupo':'background:#083344;color:#67e8f9',
-  'Pago Completo':'background:#052e16;color:#86efac',
-  'Viaje Realizado':'background:#022c22;color:#6ee7b7',
-  'Posventa':'background:#500724;color:#f9a8d4'
+var SECCIONES = {
+  home:    {titulo:'CRM Agencia de Viajes', sub:'Panel principal',        init:'shCargarDatos'},
+  buscar:  {titulo:'Buscar Cliente',         sub:'Nombre, cédula o celular',init:null},
+  kanban:  {titulo:'Tablero Kanban',         sub:'Gestión de reservas',   init:'skCargar'},
+  pago:    {titulo:'Registrar Pago',         sub:'Abonos y comprobantes', init:null},
+  cliente: {titulo:'Añadir Cliente',         sub:'Verificar o crear',     init:null},
+  destino: {titulo:'Destinos',               sub:'Rutas y viajes',        init:'sdCargar'}
 };
 
-function fmt(n){ return '$'+(Number(n)||0).toLocaleString('es-CO'); }
+var seccionActual = null;
 
-function toast(msg, color='#1e40af'){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.style.background=color; t.style.opacity='1';
-  setTimeout(()=>t.style.opacity='0',2500);
+function navegarA(seccion) {
+  if (seccionActual === seccion) return;
+  seccionActual = seccion;
+  var cfg = SECCIONES[seccion] || SECCIONES.home;
+  document.getElementById('hdr-title').textContent = cfg.titulo;
+  document.getElementById('hdr-sub').textContent   = cfg.sub;
+  document.querySelectorAll('.bnav-btn').forEach(function(b){b.classList.remove('active');});
+  var nb = document.getElementById('nav-' + seccion);
+  if (nb) nb.classList.add('active');
+  document.querySelectorAll('.seccion').forEach(function(s){s.classList.remove('activa');});
+  var sec = document.getElementById('sec-' + seccion);
+  if (sec) sec.classList.add('activa');
+  document.getElementById('spa-contenido').scrollTop = 0;
+  if (cfg.init && typeof window[cfg.init] === 'function') {
+    window[cfg.init]();
+  }
 }
 
-function cargarDatos(){
-  // Stats
-  google.script.run
-    .withSuccessHandler(d=>{
-      document.getElementById('stats-area').innerHTML = `
-        <div class="stat-card">
-          <div style="font-size:1.6rem;font-weight:800;color:#3b82f6;">${d.totalClientes}</div>
-          <div style="font-size:.7rem;color:#64748b;font-weight:600;">👤 Clientes</div>
-        </div>
-        <div class="stat-card">
-          <div style="font-size:1.6rem;font-weight:800;color:#a78bfa;">${d.totalCotiz}</div>
-          <div style="font-size:.7rem;color:#64748b;font-weight:600;">📋 Cotizaciones</div>
-        </div>
-        <div class="stat-card">
-          <div style="font-size:1.6rem;font-weight:800;color:#34d399;">${d.totalReservas}</div>
-          <div style="font-size:.7rem;color:#64748b;font-weight:600;">🎫 Reservas</div>
-        </div>
-        <div class="stat-card">
-          <div style="font-size:1.1rem;font-weight:800;color:#fbbf24;">${fmt(d.totalRecaudado)}</div>
-          <div style="font-size:.7rem;color:#64748b;font-weight:600;">💰 Recaudado</div>
-        </div>`;
-    })
-    .obtenerResumenGeneral();
-
-  // Últimas reservas
-  google.script.run
-    .withSuccessHandler(rs=>{
-      const c = document.getElementById('ultimas-area');
-      if(!rs||!rs.length){
-        c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin actividad aún</div>';
-        return;
-      }
-      // Mostrar las últimas 8 ordenadas por fila desc
-      const ult = rs.slice().reverse().slice(0,8);
-      c.innerHTML = ult.map(r=>{
-        const esSeg = !r.esReservaReal;
-        const pct   = r.totalPagar>0?Math.round((r.totalAbono/r.totalPagar)*100):0;
-        const estilo = ETAPA_COL[r.etapa]||'background:#1e293b;color:#94a3b8';
-        return `
-          <div class="res-card ${esSeg?'seg':'real'}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;margin-bottom:.3rem;">
-              <div style="font-size:.8rem;font-weight:700;color:#e2e8f0;">${r.nombreCliente}</div>
-              <span class="etapa-pill" style="${estilo}">${r.etapa}</span>
-            </div>
-            <div style="font-size:.72rem;color:#64748b;margin-bottom:${esSeg?'0':'.4rem'};">
-              ${r.ruta ? '✈️ '+r.ruta : '<em>Sin destino asignado</em>'}
-              ${r.fechaViaje ? ' · '+r.fechaViaje : ''}
-            </div>
-            ${!esSeg?`
-              <div style="display:flex;justify-content:space-between;font-size:.72rem;">
-                <span style="color:#94a3b8;">${fmt(r.totalAbono)}/${fmt(r.totalPagar)}</span>
-                <span style="color:${Number(r.saldoPendiente)===0?'#34d399':'#f87171'};font-weight:700;">${fmt(r.saldoPendiente)} pendiente</span>
-              </div>
-              <div class="prog-track"><div class="prog-fill" style="width:${pct}%;background:${pct===100?'#34d399':'#3b82f6'};"></div></div>` : ''}
-          </div>`;
-      }).join('');
-    })
-    .obtenerReservas();
+function refrescarSeccion() {
+  if (!seccionActual) return;
+  var cfg = SECCIONES[seccionActual];
+  if (cfg && cfg.init && typeof window[cfg.init] === 'function') {
+    window[cfg.init]();
+  }
 }
 
-// Instalar como PWA: guardar en pantalla de inicio desde el navegador del celular
-if('serviceWorker' in navigator){
-  // No se registra SW en este contexto, pero la app funciona como webapp
-}
+window.irA = function(seccion) { navegarA(seccion); };
 
-cargarDatos();
+// Ocultar spinner e iniciar
+document.getElementById('spa-loading').style.display = 'none';
+navegarA('home');
 </script>
 </body>
 </html>

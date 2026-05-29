@@ -1,0 +1,151 @@
+<style>
+.sh-stat { background:#1e293b; border-radius:.9rem; padding:.85rem; }
+.sh-navbtn { display:flex; flex-direction:column; align-items:center; gap:.35rem; padding:.8rem .4rem;
+             border-radius:.9rem; cursor:pointer; background:#1e293b; border:2px solid transparent;
+             transition:all .15s; }
+.sh-navbtn:active { border-color:#3b82f6; background:#172554; }
+.sh-navbtn .ico { font-size:1.5rem; line-height:1; }
+.sh-navbtn .lbl { font-size:.65rem; font-weight:700; color:#94a3b8; text-align:center; }
+.sh-res { background:#1e293b; border-radius:.8rem; padding:.75rem; margin-bottom:.5rem; border-left:3px solid #334155; }
+.sh-res.real { border-left-color:#3b82f6; }
+.sh-res.seg  { border-left-color:#475569; }
+.sh-etapa { font-size:.6rem; font-weight:700; padding:2px 7px; border-radius:9999px; }
+.sh-spin { display:inline-block; width:22px; height:22px; border:3px solid rgba(59,130,246,.2); border-top-color:#3b82f6; border-radius:50%; animation:shsp .8s linear infinite; }
+@keyframes shsp { to{transform:rotate(360deg);} }
+.sh-sec { font-size:.65rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.06em; margin-bottom:.6rem; padding:0 1rem; }
+.sh-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:.55rem; padding:0 1rem; margin-bottom:1.1rem; }
+.sh-grid3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.5rem; padding:0 1rem; margin-bottom:1.1rem; }
+</style>
+
+<div style="padding-top:.85rem;">
+
+  <!-- STATS -->
+  <div class="sh-sec">Resumen</div>
+  <div class="sh-grid2" id="sh-stats">
+    <div class="sh-stat" style="display:flex;align-items:center;justify-content:center;min-height:58px;">
+      <div class="sh-spin"></div>
+    </div>
+    <div class="sh-stat" style="display:flex;align-items:center;justify-content:center;min-height:58px;">
+      <div class="sh-spin"></div>
+    </div>
+    <div class="sh-stat" style="display:flex;align-items:center;justify-content:center;min-height:58px;">
+      <div class="sh-spin"></div>
+    </div>
+    <div class="sh-stat" style="display:flex;align-items:center;justify-content:center;min-height:58px;">
+      <div class="sh-spin"></div>
+    </div>
+  </div>
+
+  <!-- ACCIONES RÁPIDAS -->
+  <div class="sh-sec">Acciones rápidas</div>
+  <div class="sh-grid3">
+    <div class="sh-navbtn" onclick="window.irA('cliente')">
+      <span class="ico">➕</span><span class="lbl">Añadir Cliente</span>
+    </div>
+    <div class="sh-navbtn" onclick="window.irA('buscar')">
+      <span class="ico">🔍</span><span class="lbl">Buscar Cliente</span>
+    </div>
+    <div class="sh-navbtn" onclick="window.irA('kanban')">
+      <span class="ico">📊</span><span class="lbl">Tablero Kanban</span>
+    </div>
+    <div class="sh-navbtn" onclick="window.irA('pago')">
+      <span class="ico">💳</span><span class="lbl">Registrar Pago</span>
+    </div>
+    <div class="sh-navbtn" onclick="window.irA('destino')">
+      <span class="ico">🗺️</span><span class="lbl">Destinos</span>
+    </div>
+    <div class="sh-navbtn" onclick="window.shCargarDatos()">
+      <span class="ico">🔄</span><span class="lbl">Actualizar</span>
+    </div>
+  </div>
+
+  <!-- ÚLTIMAS ACTIVIDADES -->
+  <div class="sh-sec">Últimas actividades</div>
+  <div style="padding:0 1rem 1.5rem;" id="sh-ultimas">
+    <div style="display:flex;align-items:center;justify-content:center;padding:2rem 0;gap:.5rem;">
+      <div class="sh-spin"></div>
+      <span style="color:#475569;font-size:.78rem;">Cargando...</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const ECOL = {
+    'Nuevos Interesados':'background:#1e293b;color:#94a3b8',
+    'Contactados':'background:#1e3a8a;color:#93c5fd',
+    'Cotización por Enviar':'background:#451a03;color:#fcd34d',
+    'Cotización Enviada':'background:#2e1065;color:#c4b5fd',
+    'Seguimiento':'background:#431407;color:#fdba74',
+    'Separó Cupo':'background:#083344;color:#67e8f9',
+    'Pago Completo':'background:#052e16;color:#86efac',
+    'Viaje Realizado':'background:#022c22;color:#6ee7b7',
+    'Posventa':'background:#500724;color:#f9a8d4'
+  };
+  function fmt(n){ return '$'+(Number(n)||0).toLocaleString('es-CO'); }
+
+  function shCargarDatos(){
+    // Stats
+    google.script.run
+      .withSuccessHandler(d=>{
+        document.getElementById('sh-stats').innerHTML = `
+          <div class="sh-stat">
+            <div style="font-size:1.6rem;font-weight:800;color:#3b82f6;">${d.totalClientes}</div>
+            <div style="font-size:.68rem;color:#475569;font-weight:700;">👤 Clientes</div>
+          </div>
+          <div class="sh-stat">
+            <div style="font-size:1.6rem;font-weight:800;color:#a78bfa;">${d.totalCotiz}</div>
+            <div style="font-size:.68rem;color:#475569;font-weight:700;">📋 Cotizaciones</div>
+          </div>
+          <div class="sh-stat">
+            <div style="font-size:1.6rem;font-weight:800;color:#34d399;">${d.totalReservas}</div>
+            <div style="font-size:.68rem;color:#475569;font-weight:700;">🎫 Reservas</div>
+          </div>
+          <div class="sh-stat">
+            <div style="font-size:1.1rem;font-weight:800;color:#fbbf24;">${fmt(d.totalRecaudado)}</div>
+            <div style="font-size:.68rem;color:#475569;font-weight:700;">💰 Recaudado</div>
+          </div>`;
+      })
+      .obtenerResumenGeneral();
+
+    // Actividades
+    google.script.run
+      .withSuccessHandler(rs=>{
+        const c = document.getElementById('sh-ultimas');
+        if(!rs||!rs.length){
+          c.innerHTML='<div style="color:#475569;font-size:.78rem;text-align:center;padding:1.5rem 0;">Sin actividad aún</div>';
+          return;
+        }
+        c.innerHTML = rs.slice().reverse().slice(0,8).map(r=>{
+          const esSeg = !r.esReservaReal;
+          const pct = r.totalPagar>0?Math.round((r.totalAbono/r.totalPagar)*100):0;
+          const ec = ECOL[r.etapa]||'background:#1e293b;color:#94a3b8';
+          return `<div class="sh-res ${esSeg?'seg':'real'}">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;margin-bottom:.25rem;">
+              <div>
+                <div style="font-size:.8rem;font-weight:700;color:#e2e8f0;">${r.nombreCliente}</div>
+                <div style="font-size:.68rem;color:#475569;">${r.ruta||'Sin destino asignado'}</div>
+              </div>
+              <span class="sh-etapa" style="${ec};flex-shrink:0;">${r.etapa}</span>
+            </div>
+            ${!esSeg?`
+              <div style="display:flex;justify-content:space-between;font-size:.68rem;margin-top:.3rem;">
+                <span style="color:#64748b;">${fmt(r.totalAbono)}/${fmt(r.totalPagar)}</span>
+                <span style="color:${Number(r.saldoPendiente)===0?'#34d399':'#f87171'};font-weight:700;">${fmt(r.saldoPendiente)}</span>
+              </div>
+              <div style="background:#334155;border-radius:9999px;height:3px;margin-top:4px;">
+                <div style="background:${pct===100?'#34d399':'#3b82f6'};border-radius:9999px;height:3px;width:${pct}%;"></div>
+              </div>`:''
+            }
+          </div>`;
+        }).join('');
+      })
+      .obtenerReservas();
+  }
+
+  // Exponer para el botón Actualizar
+  window.shCargarDatos = shCargarDatos;
+  shCargarDatos();
+})();
+</script>

@@ -1,0 +1,474 @@
+<style>
+.sb-card{background:#1e293b;border-radius:1rem;padding:.85rem;margin:0 .85rem .6rem;}
+.sb-label{display:block;font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;}
+.sb-input{width:100%;background:#0f172a;border:1px solid #334155;border-radius:.65rem;color:#e2e8f0;padding:.5rem .75rem;font-size:.875rem;outline:none;font-family:inherit;box-sizing:border-box;}
+.sb-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+.sb-input option{background:#1e293b;}
+.sb-btn{border-radius:.75rem;padding:.55rem 1rem;font-size:.82rem;font-weight:700;cursor:pointer;border:none;width:100%;margin-bottom:.4rem;}
+.sb-btn-blue{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;}
+.sb-btn-green{background:linear-gradient(135deg,#065f46,#10b981);color:#fff;}
+.sb-btn-gray{background:#0f172a;color:#94a3b8;border:1px solid #334155;}
+.sb-btn-sm{border-radius:.5rem;padding:.28rem .65rem;font-size:.7rem;font-weight:700;cursor:pointer;border:none;}
+.sb-tab{flex:1;padding:.42rem .3rem;font-size:.7rem;font-weight:700;border:none;cursor:pointer;border-radius:.55rem;transition:all .15s;}
+.sb-tab.active{background:#1e40af;color:#fff;}
+.sb-tab:not(.active){background:#0f172a;color:#64748b;}
+.sb-etapa{font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:9999px;}
+.sb-result{cursor:pointer;transition:all .15s;}
+.sb-result:hover{background:#172554;}
+.sb-toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%);padding:.45rem 1.2rem;border-radius:9999px;font-size:.8rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;min-width:200px;text-align:center;color:#fff;}
+.sb-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#3b82f6;border-radius:50%;animation:sbsp .7s linear infinite;vertical-align:middle;}
+@keyframes sbsp{to{transform:rotate(360deg);}}
+</style>
+
+<div id="sb-toast" class="sb-toast"></div>
+<div style="padding:.85rem 0 1.5rem;">
+
+  <!-- Buscador -->
+  <div class="sb-card">
+    <div style="display:flex;gap:.5rem;">
+      <input class="sb-input" type="text" id="sb-q" placeholder="Nombre, cédula o celular..."
+             oninput="window.sbDebounce()" autocomplete="off">
+      <button onclick="window.sbBuscar()" class="sb-btn sb-btn-blue" style="width:auto;padding:.5rem 1rem;margin:0;">🔍</button>
+    </div>
+  </div>
+
+  <!-- Resultados -->
+  <div id="sb-resultados" style="padding:0 .85rem;"></div>
+
+  <!-- Detalle cliente -->
+  <div id="sb-detalle" style="display:none;">
+    <div class="sb-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;">
+        <div>
+          <div style="font-size:1rem;font-weight:800;color:#f1f5f9;" id="sb-det-nombre"></div>
+          <div style="font-size:.7rem;color:#475569;" id="sb-det-id"></div>
+        </div>
+        <button onclick="window.sbCerrarDetalle()" style="background:none;border:none;color:#475569;font-size:1.3rem;cursor:pointer;padding:0;">✕</button>
+      </div>
+      <div id="sb-det-info" style="display:grid;grid-template-columns:auto 1fr;gap:.2rem .75rem;font-size:.78rem;margin-bottom:.75rem;color:#cbd5e1;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.45rem;">
+        <button onclick="window.sbIrCotizacion()" class="sb-btn sb-btn-blue" style="margin:0;">📋 Cotización</button>
+        <button onclick="window.sbNuevoInteres()" class="sb-btn sb-btn-green" style="margin:0;">🔄 Nuevo interés</button>
+      </div>
+      <button onclick="window.sbEditarCliente()" class="sb-btn sb-btn-gray">✏️ Editar datos</button>
+    </div>
+
+    <!-- Tabs -->
+    <div style="display:flex;gap:.35rem;margin:0 .85rem .6rem;">
+      <button class="sb-tab active" id="sb-tab-cotiz"    onclick="window.sbTab('cotiz',this)">📋 Cotizaciones</button>
+      <button class="sb-tab"        id="sb-tab-reservas" onclick="window.sbTab('reservas',this)">🎫 Reservas</button>
+      <button class="sb-tab"        id="sb-tab-pagos"    onclick="window.sbTab('pagos',this)">💳 Pagos</button>
+    </div>
+    <div id="sb-tab-cotiz-c"    style="padding:0 .85rem;"></div>
+    <div id="sb-tab-reservas-c" style="padding:0 .85rem;display:none;"></div>
+    <div id="sb-tab-pagos-c"    style="padding:0 .85rem;display:none;"></div>
+  </div>
+
+  <!-- Form cotización -->
+  <div id="sb-form-cot" style="display:none;">
+    <div class="sb-card">
+      <div class="sb-label" style="margin-bottom:.5rem;">Nueva Cotización</div>
+      <div id="sb-cot-tag" style="background:#172554;color:#93c5fd;font-size:.75rem;font-weight:700;border-radius:.6rem;padding:.4rem .7rem;margin-bottom:.7rem;"></div>
+      <div style="display:flex;flex-direction:column;gap:.6rem;">
+        <div><label class="sb-label">Destino *</label>
+          <select class="sb-input" id="sb-cot-dest" onchange="window.sbCalcCot()"><option value="">Cargando...</option></select></div>
+        <div><label class="sb-label">Personas</label>
+          <input class="sb-input" type="number" id="sb-cot-cupos" value="1" min="1" oninput="window.sbCalcCot()"></div>
+        <div id="sb-cot-prev" style="display:none;background:#052e16;color:#86efac;font-size:.75rem;font-weight:700;border-radius:.6rem;padding:.4rem .7rem;"></div>
+        <div><label class="sb-label">Notas</label>
+          <textarea class="sb-input" id="sb-cot-notas" rows="2"></textarea></div>
+      </div>
+      <div style="margin-top:.75rem;">
+        <button onclick="window.sbGuardarCot()" class="sb-btn sb-btn-blue">💾 Guardar Cotización</button>
+        <button onclick="window.sbVolverDetalle()" class="sb-btn sb-btn-gray">← Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form pasajero -->
+  <div id="sb-form-pas" style="display:none;">
+    <div class="sb-card">
+      <div class="sb-label" style="margin-bottom:.5rem;">Agregar Pasajero</div>
+      <input type="hidden" id="sb-pas-id-res">
+      <div style="display:flex;flex-direction:column;gap:.55rem;">
+        <div><label class="sb-label">Reserva *</label>
+          <select class="sb-input" id="sb-pas-reserva"><option value="">Seleccionar...</option></select></div>
+        <div><label class="sb-label">Nombre *</label>
+          <input class="sb-input" type="text" id="sb-pas-nombre" placeholder="Nombre completo"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+          <div><label class="sb-label">Tipo doc.</label>
+            <select class="sb-input" id="sb-pas-tipo"><option>CC</option><option>TI</option><option>PA</option><option>CE</option></select></div>
+          <div><label class="sb-label">Número *</label>
+            <input class="sb-input" type="text" id="sb-pas-ced" inputmode="numeric"></div>
+        </div>
+        <div><label class="sb-label">Celular</label>
+          <input class="sb-input" type="tel" id="sb-pas-cel" inputmode="tel"></div>
+        <div><label class="sb-label">Email</label>
+          <input class="sb-input" type="email" id="sb-pas-email"></div>
+        <div><label class="sb-label">Fecha de nacimiento</label>
+          <input class="sb-input" type="date" id="sb-pas-fnac"></div>
+      </div>
+      <div style="margin-top:.75rem;">
+        <button onclick="window.sbGuardarPas()" class="sb-btn sb-btn-blue">💾 Guardar Pasajero</button>
+        <button onclick="window.sbVolverDetalle()" class="sb-btn sb-btn-gray">← Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form editar cliente -->
+  <div id="sb-form-editar" style="display:none;">
+    <div class="sb-card">
+      <div class="sb-label" style="margin-bottom:.75rem;">Editar Cliente</div>
+      <input type="hidden" id="sb-edit-id">
+      <div style="display:flex;flex-direction:column;gap:.6rem;">
+        <div><label class="sb-label">Nombre *</label><input class="sb-input" type="text" id="sb-edit-nombre"></div>
+        <div><label class="sb-label">Cédula</label><input class="sb-input" type="text" id="sb-edit-cedula" readonly style="opacity:.5;"></div>
+        <div><label class="sb-label">Celular *</label><input class="sb-input" type="tel" id="sb-edit-celular" inputmode="tel"></div>
+        <div><label class="sb-label">Email</label><input class="sb-input" type="email" id="sb-edit-email"></div>
+        <div><label class="sb-label">Municipio</label><input class="sb-input" type="text" id="sb-edit-mun"></div>
+        <div><label class="sb-label">¿Cómo nos conoció?</label>
+          <select class="sb-input" id="sb-edit-origen">
+            <option value="">Seleccionar...</option>
+            <option>Instagram</option><option>Facebook</option><option>WhatsApp</option>
+            <option>TikTok</option><option>Referido</option><option>Llamada</option><option>Web</option><option>Otro</option>
+          </select></div>
+      </div>
+      <div style="margin-top:.75rem;">
+        <button onclick="window.sbGuardarEdicion()" id="sb-btn-edit" class="sb-btn sb-btn-blue">💾 Guardar Cambios</button>
+        <button onclick="window.sbVolverDetalle()" class="sb-btn sb-btn-gray">← Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  let clienteActivo=null;
+  let debTimer=null;
+
+  function sbToast(msg,color='#059669'){
+    const t=document.getElementById('sb-toast');
+    t.textContent=msg;t.style.background=color;t.style.opacity='1';
+    setTimeout(()=>t.style.opacity='0',2600);
+  }
+  function fmt(n){return '$'+(Number(n)||0).toLocaleString('es-CO');}
+
+  function sbOcultar(){
+    ['sb-resultados','sb-detalle','sb-form-cot','sb-form-pas','sb-form-editar']
+      .forEach(id=>{ const el=document.getElementById(id); if(el){el.style.display='none'; if(el.innerHTML!==undefined&&id==='sb-resultados')el.innerHTML='';} });
+  }
+
+  const ECOL={
+    'Nuevos Interesados':'background:#1e293b;color:#94a3b8','Contactados':'background:#1e3a8a;color:#93c5fd',
+    'Cotización por Enviar':'background:#451a03;color:#fcd34d','Cotización Enviada':'background:#2e1065;color:#c4b5fd',
+    'Seguimiento':'background:#431407;color:#fdba74','Separó Cupo':'background:#083344;color:#67e8f9',
+    'Pago Completo':'background:#052e16;color:#86efac','Viaje Realizado':'background:#022c22;color:#6ee7b7',
+    'Posventa':'background:#500724;color:#f9a8d4'
+  };
+
+  // ── Búsqueda ────────────────────────────────────────
+  window.sbDebounce=function(){clearTimeout(debTimer);debTimer=setTimeout(sbBuscar,380);};
+  window.sbBuscar=function(){
+    const q=document.getElementById('sb-q').value.trim();
+    if(q.length<2){document.getElementById('sb-resultados').innerHTML='';document.getElementById('sb-resultados').style.display='none';return;}
+    google.script.run
+      .withSuccessHandler(lista=>{
+        const c=document.getElementById('sb-resultados');
+        c.style.display='block';
+        sbOcultar();
+        c.style.display='block';
+        if(!lista.length){
+          c.innerHTML=`<div style="color:#475569;font-size:.78rem;text-align:center;padding:1.5rem 0;">
+            Sin resultados.<br>
+            <span onclick="window.irA('cliente')" style="color:#3b82f6;font-weight:700;cursor:pointer;">Crear cliente nuevo</span>
+          </div>`;return;
+        }
+        c.innerHTML=lista.map(cl=>`
+          <div class="sb-card sb-result" onclick="window.sbVerDetalle('${cl.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;">
+              <div>
+                <div style="font-weight:700;font-size:.88rem;color:#f1f5f9;">${cl.nombre}</div>
+                <div style="font-size:.72rem;color:#64748b;">🪪 ${cl.cedula} · 📱 ${cl.celular}</div>
+                <div style="font-size:.68rem;color:#475569;">${cl.municipio||'–'} · ${cl.origen||'–'}</div>
+              </div>
+              <span style="color:#3b82f6;font-size:1.2rem;">›</span>
+            </div>
+          </div>`).join('');
+      })
+      .buscarClientes(q);
+  };
+
+  // ── Ver detalle ─────────────────────────────────────
+  window.sbVerDetalle=function(id){
+    document.getElementById('sb-resultados').innerHTML='';
+    document.getElementById('sb-q').value='';
+    google.script.run.withSuccessHandler(c=>{
+      if(!c){sbToast('No encontrado','#dc2626');return;}
+      clienteActivo=c;
+      document.getElementById('sb-det-nombre').textContent=c.nombre;
+      document.getElementById('sb-det-id').textContent='ID: '+c.id;
+      document.getElementById('sb-det-info').innerHTML=`
+        <span style="color:#64748b;">Cédula:</span><span style="font-weight:600;">${c.cedula}</span>
+        <span style="color:#64748b;">Celular:</span><span style="font-weight:600;">${c.celular}</span>
+        <span style="color:#64748b;">Email:</span><span style="word-break:break-all;">${c.email||'–'}</span>
+        <span style="color:#64748b;">Municipio:</span><span>${c.municipio||'–'}</span>
+        <span style="color:#64748b;">Origen:</span><span>${c.origen||'–'}</span>`;
+      sbOcultar();
+      document.getElementById('sb-detalle').style.display='block';
+      sbCargarHistorial(id);
+      sbTab('cotiz',document.getElementById('sb-tab-cotiz'));
+    }).obtenerClientePorId(id);
+  };
+
+  function sbCargarHistorial(id){
+    google.script.run.withSuccessHandler(h=>{
+      sbRenderCotiz(h.cotizaciones);
+      sbRenderReservas(h.reservas);
+      sbRenderPagos(h.pagos);
+    }).obtenerHistorialCliente(id);
+  }
+
+  // ── Render cotizaciones ─────────────────────────────
+  function sbRenderCotiz(lista){
+    const c=document.getElementById('sb-tab-cotiz-c');
+    if(!lista.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin cotizaciones</div>';return;}
+    const COL={'Pendiente':'background:#451a03;color:#fcd34d','Reservada':'background:#052e16;color:#86efac','Cancelada':'background:#450a0a;color:#fca5a5'};
+    c.innerHTML=lista.map(ct=>`
+      <div class="sb-card" style="margin-bottom:.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem;">
+          <div>
+            <div style="font-size:.82rem;font-weight:700;color:#e2e8f0;">✈️ ${ct.destino||'–'}</div>
+            <div style="font-size:.7rem;color:#64748b;">${ct.cupos} persona(s) · ${ct.fecha}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <span class="sb-etapa" style="${COL[ct.estado]||'background:#1e293b;color:#94a3b8'}">${ct.estado}</span>
+            <div style="font-size:.75rem;font-weight:700;color:#93c5fd;margin-top:.2rem;">${fmt(ct.valor)}</div>
+          </div>
+        </div>
+        ${ct.estado==='Pendiente'?`<button onclick="window.sbConvertirReserva('${ct.id}')"
+          class="sb-btn-sm" style="background:#172554;color:#93c5fd;width:100%;margin-top:.45rem;">
+          🎫 Añadir al tablero desde esta cotización
+        </button>`:''}
+      </div>`).join('');
+  }
+
+  // ── Render reservas ─────────────────────────────────
+  function sbRenderReservas(lista){
+    const c=document.getElementById('sb-tab-reservas-c');
+    if(!lista.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin entradas en el tablero</div>';return;}
+    const ETAPAS=['Nuevos Interesados','Contactados','Cotización por Enviar','Cotización Enviada','Seguimiento','Separó Cupo','Pago Completo','Viaje Realizado','Posventa'];
+    c.innerHTML=lista.map(r=>{
+      const esSeg=String(r.id).startsWith('SEG-');
+      const pct=r.total>0?Math.round((r.abono/r.total)*100):0;
+      return `<div class="sb-card" style="border-left:3px solid ${esSeg?'#475569':'#3b82f6'};margin-bottom:.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;margin-bottom:.45rem;">
+          <div>
+            <div style="font-size:.78rem;font-weight:700;color:${esSeg?'#94a3b8':'#93c5fd'};">${esSeg?'📌 Seguimiento':'🎫 Reserva'}: ${r.id}</div>
+            <div style="font-size:.7rem;color:#64748b;">${r.destino||'Sin destino asignado'}</div>
+            ${r.fechaViaje?`<div style="font-size:.68rem;color:#475569;">${r.fechaViaje}</div>`:''}
+          </div>
+          <span class="sb-etapa" style="${ECOL[r.etapa]||'background:#1e293b;color:#94a3b8'};flex-shrink:0;">${r.etapa}</span>
+        </div>
+        ${!esSeg?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.3rem;text-align:center;margin-bottom:.4rem;">
+          <div style="background:#0f172a;border-radius:.5rem;padding:.25rem .2rem;">
+            <div style="font-size:.62rem;color:#475569;">Total</div>
+            <div style="font-size:.72rem;font-weight:700;color:#e2e8f0;">${fmt(r.total)}</div>
+          </div>
+          <div style="background:#052e16;border-radius:.5rem;padding:.25rem .2rem;">
+            <div style="font-size:.62rem;color:#475569;">Abonado</div>
+            <div style="font-size:.72rem;font-weight:700;color:#86efac;">${fmt(r.abono)}</div>
+          </div>
+          <div style="background:${Number(r.saldo)===0?'#052e16':'#450a0a'};border-radius:.5rem;padding:.25rem .2rem;">
+            <div style="font-size:.62rem;color:#475569;">Saldo</div>
+            <div style="font-size:.72rem;font-weight:700;color:${Number(r.saldo)===0?'#86efac':'#fca5a5'};">${fmt(r.saldo)}</div>
+          </div>
+        </div>
+        <div style="background:#334155;border-radius:9999px;height:3px;margin-bottom:.4rem;">
+          <div style="background:${pct===100?'#34d399':'#3b82f6'};border-radius:9999px;height:3px;width:${pct}%;"></div>
+        </div>`:''}
+        <div>
+          <label class="sb-label">Cambiar etapa</label>
+          <select class="sb-input" style="font-size:.78rem;" onchange="window.sbCambiarEtapa('${r.id}',this.value)">
+            ${ETAPAS.map(e=>`<option ${e===r.etapa?'selected':''}>${e}</option>`).join('')}
+          </select>
+        </div>
+        ${!esSeg?`<button onclick="window.sbAbrirPas('${r.id}')"
+          class="sb-btn-sm" style="background:#052e16;color:#86efac;width:100%;margin-top:.4rem;">
+          👥 Agregar Pasajero
+        </button>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  // ── Render pagos ─────────────────────────────────────
+  function sbRenderPagos(lista){
+    const c=document.getElementById('sb-tab-pagos-c');
+    if(!lista.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin pagos registrados</div>';return;}
+    c.innerHTML=lista.map(p=>`
+      <div class="sb-card" style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;margin-bottom:.4rem;">
+        <div>
+          <div style="font-size:.82rem;font-weight:700;color:#86efac;">${fmt(p.monto)}</div>
+          <div style="font-size:.7rem;color:#64748b;">${p.metodo||'–'} · ${p.fecha}</div>
+          ${p.ref?`<div style="font-size:.68rem;color:#475569;">Ref: ${p.ref}</div>`:''}
+        </div>
+        ${p.enlace?`<a href="${p.enlace}" target="_blank"
+          class="sb-btn-sm" style="background:#172554;color:#93c5fd;text-decoration:none;flex-shrink:0;">📎 Ver</a>`:''}
+      </div>`).join('');
+  }
+
+  // ── Tabs ─────────────────────────────────────────────
+  window.sbTab=function(tab,btn){
+    ['cotiz','reservas','pagos'].forEach(t=>{
+      const el=document.getElementById('sb-tab-'+t+'-c');
+      if(el)el.style.display=t===tab?'block':'none';
+    });
+    document.querySelectorAll('.sb-tab').forEach(b=>b.classList.remove('active'));
+    if(btn)btn.classList.add('active');
+  };
+
+  // ── Cambiar etapa ────────────────────────────────────
+  window.sbCambiarEtapa=function(id,etapa){
+    if(String(id).startsWith('SEG-')&&etapa==='Separó Cupo'){
+      sbToast('ℹ️ Ve al Kanban para separar cupo y asignar destino','#1d4ed8');return;
+    }
+    google.script.run.withSuccessHandler(r=>{
+      if(r.ok)sbToast('✅ Etapa actualizada');
+      else sbToast('❗ '+(r.error||'Error'),'#dc2626');
+    }).actualizarEtapaReserva(id,etapa,null);
+  };
+
+  // ── Convertir cotización a seguimiento ───────────────
+  window.sbConvertirReserva=function(idCot){
+    if(!confirm('¿Añadir al tablero desde esta cotización?'))return;
+    google.script.run.withSuccessHandler(r=>{
+      if(r.ok){sbToast('✅ Añadido al tablero');sbCargarHistorial(clienteActivo.id);sbTab('reservas',document.getElementById('sb-tab-reservas'));}
+      else sbToast('❗ '+(r.error||'Error'),'#dc2626');
+    }).nuevaEntradaSeguimiento(clienteActivo.id);
+  };
+
+  // ── Cotización ───────────────────────────────────────
+  window.sbIrCotizacion=function(){
+    document.getElementById('sb-detalle').style.display='none';
+    document.getElementById('sb-form-cot').style.display='block';
+    document.getElementById('sb-cot-tag').textContent='👤 '+clienteActivo.nombre+' · '+clienteActivo.cedula;
+    google.script.run.withSuccessHandler(ds=>{
+      const sel=document.getElementById('sb-cot-dest');
+      sel.innerHTML='<option value="">Seleccionar destino...</option>'+
+        ds.filter(d=>d.estado==='Activo').map(d=>
+          `<option value="${d.id}" data-vp="${d.valorPersona}">${d.ruta} — ${d.fechaViaje||'sin fecha'} (Cupos: ${d.cuposDisponibles})</option>`
+        ).join('');
+    }).obtenerDestinos();
+  };
+
+  window.sbCalcCot=function(){
+    const sel=document.getElementById('sb-cot-dest');
+    const opt=sel.options[sel.selectedIndex];
+    const cupos=Number(document.getElementById('sb-cot-cupos').value)||1;
+    const vp=Number(opt&&opt.dataset.vp)||0;
+    const prev=document.getElementById('sb-cot-prev');
+    if(vp){prev.textContent=`💰 ${cupos} × ${fmt(vp)} = ${fmt(vp*cupos)}`;prev.style.display='block';}
+    else prev.style.display='none';
+  };
+
+  window.sbGuardarCot=function(){
+    const idDest=document.getElementById('sb-cot-dest').value;
+    if(!idDest){sbToast('❗ Selecciona un destino','#dc2626');return;}
+    google.script.run.withSuccessHandler(r=>{
+      sbToast('✅ Cotización guardada: '+r.id);
+      setTimeout(sbVolverDetalle,1200);
+    }).crearCotizacion({
+      idCliente:clienteActivo.id,idDestino:idDest,
+      cantidadCupos:Number(document.getElementById('sb-cot-cupos').value)||1,
+      notas:document.getElementById('sb-cot-notas').value
+    });
+  };
+
+  // ── Pasajero ─────────────────────────────────────────
+  window.sbAbrirPas=function(idRes){
+    document.getElementById('sb-detalle').style.display='none';
+    document.getElementById('sb-form-pas').style.display='block';
+    document.getElementById('sb-pas-id-res').value=idRes;
+    document.getElementById('sb-pas-reserva').innerHTML=`<option value="${idRes}" selected>${idRes}</option>`;
+  };
+
+  window.sbGuardarPas=function(){
+    const datos={
+      idReserva:document.getElementById('sb-pas-id-res').value,
+      idCliente:clienteActivo.id,
+      nombre:document.getElementById('sb-pas-nombre').value.trim(),
+      tipoDocumento:document.getElementById('sb-pas-tipo').value,
+      cedula:document.getElementById('sb-pas-ced').value.trim(),
+      celular:document.getElementById('sb-pas-cel').value.trim(),
+      email:document.getElementById('sb-pas-email').value.trim(),
+      fechaNacimiento:document.getElementById('sb-pas-fnac').value
+    };
+    if(!datos.nombre||!datos.cedula){sbToast('❗ Nombre y documento son obligatorios','#dc2626');return;}
+    google.script.run.withSuccessHandler(r=>{
+      sbToast('✅ Pasajero registrado');
+      setTimeout(sbVolverDetalle,1000);
+    }).agregarPasajero(datos);
+  };
+
+  // ── Nuevo interés ─────────────────────────────────────
+  window.sbNuevoInteres=function(){
+    if(!confirm('¿Crear nueva entrada en el Kanban para '+clienteActivo.nombre+'?'))return;
+    google.script.run.withSuccessHandler(r=>{
+      if(r.ok){sbToast('✅ Nueva entrada en Nuevos Interesados');sbCargarHistorial(clienteActivo.id);}
+      else sbToast('❗ '+(r.error||'Error'),'#dc2626');
+    }).nuevaEntradaSeguimiento(clienteActivo.id);
+  };
+
+  // ── Editar cliente ────────────────────────────────────
+  window.sbEditarCliente=function(){
+    const c=clienteActivo;
+    document.getElementById('sb-edit-id').value=c.id;
+    document.getElementById('sb-edit-nombre').value=c.nombre;
+    document.getElementById('sb-edit-cedula').value=c.cedula;
+    document.getElementById('sb-edit-celular').value=c.celular;
+    document.getElementById('sb-edit-email').value=c.email||'';
+    document.getElementById('sb-edit-mun').value=c.municipio||'';
+    document.getElementById('sb-edit-origen').value=c.origen||'';
+    document.getElementById('sb-detalle').style.display='none';
+    document.getElementById('sb-form-editar').style.display='block';
+  };
+
+  window.sbGuardarEdicion=function(){
+    const btn=document.getElementById('sb-btn-edit');
+    btn.disabled=true;btn.textContent='Guardando...';
+    google.script.run.withSuccessHandler(r=>{
+      btn.disabled=false;btn.textContent='💾 Guardar Cambios';
+      if(r.ok){
+        sbToast('✅ Cliente actualizado');
+        clienteActivo.nombre=document.getElementById('sb-edit-nombre').value.trim();
+        clienteActivo.celular=document.getElementById('sb-edit-celular').value.trim();
+        clienteActivo.email=document.getElementById('sb-edit-email').value.trim();
+        clienteActivo.municipio=document.getElementById('sb-edit-mun').value.trim();
+        clienteActivo.origen=document.getElementById('sb-edit-origen').value;
+        setTimeout(()=>{sbVolverDetalle();sbVerDetalle(clienteActivo.id);},800);
+      } else sbToast('❗ '+(r.error||'Error'),'#dc2626');
+    }).actualizarCliente({
+      id:document.getElementById('sb-edit-id').value,
+      nombre:document.getElementById('sb-edit-nombre').value.trim(),
+      cedula:document.getElementById('sb-edit-cedula').value.trim(),
+      celular:document.getElementById('sb-edit-celular').value.trim(),
+      email:document.getElementById('sb-edit-email').value.trim(),
+      municipio:document.getElementById('sb-edit-mun').value.trim(),
+      origen:document.getElementById('sb-edit-origen').value
+    });
+  };
+
+  // ── Helpers ───────────────────────────────────────────
+  window.sbVolverDetalle=function(){
+    ['sb-form-cot','sb-form-pas','sb-form-editar'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+    if(clienteActivo)document.getElementById('sb-detalle').style.display='block';
+  };
+
+  window.sbCerrarDetalle=function(){
+    clienteActivo=null;
+    document.getElementById('sb-detalle').style.display='none';
+    document.getElementById('sb-q').value='';
+  };
+
+})();
+</script>

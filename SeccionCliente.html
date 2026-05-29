@@ -1,0 +1,291 @@
+<style>
+.sc-card{background:#1e293b;border-radius:1rem;padding:.9rem;margin:0 .85rem .65rem;}
+.sc-label{display:block;font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;}
+.sc-input{width:100%;background:#0f172a;border:1px solid #334155;border-radius:.65rem;color:#e2e8f0;padding:.5rem .75rem;font-size:.875rem;outline:none;font-family:inherit;box-sizing:border-box;}
+.sc-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+.sc-input option{background:#1e293b;}
+.sc-btn{border-radius:.75rem;padding:.6rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;border:none;width:100%;margin-bottom:.45rem;}
+.sc-btn-blue{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;}
+.sc-btn-green{background:linear-gradient(135deg,#065f46,#10b981);color:#fff;}
+.sc-btn-gray{background:#0f172a;color:#94a3b8;border:1px solid #334155;}
+.sc-badge-ok{background:#052e16;color:#86efac;font-size:.68rem;font-weight:700;padding:2px 9px;border-radius:9999px;}
+.sc-badge-warn{background:#451a03;color:#fcd34d;font-size:.68rem;font-weight:700;padding:2px 9px;border-radius:9999px;}
+.sc-toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%);padding:.45rem 1.2rem;border-radius:9999px;font-size:.8rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;min-width:220px;text-align:center;color:#fff;}
+.sc-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:scsp .7s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes scsp{to{transform:rotate(360deg);}}
+.sc-info-grid{display:grid;grid-template-columns:auto 1fr;gap:.2rem .75rem;font-size:.8rem;}
+</style>
+
+<div id="sc-toast" class="sc-toast"></div>
+<div style="padding:.85rem 0 1.5rem;">
+
+  <!-- PASO 1: verificar cédula -->
+  <div class="sc-card" id="sc-paso1">
+    <div class="sc-label" style="margin-bottom:.6rem;">Paso 1 · Verificar por cédula</div>
+    <div style="display:flex;gap:.5rem;">
+      <input class="sc-input" type="text" id="sc-cedula-buscar" placeholder="Número de cédula" inputmode="numeric"
+             onkeydown="if(event.key==='Enter')scVerificar()">
+      <button onclick="window.scVerificar()" id="sc-btn-ver" class="sc-btn sc-btn-blue" style="width:auto;padding:.5rem 1rem;">Verificar</button>
+    </div>
+  </div>
+
+  <!-- Cliente existente -->
+  <div class="sc-card" id="sc-bloque-existe" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+      <span class="sc-label" style="margin:0;">Cliente encontrado</span>
+      <span class="sc-badge-warn">⚠️ Ya registrado</span>
+    </div>
+    <div id="sc-info-existente" class="sc-info-grid" style="margin-bottom:.75rem;color:#cbd5e1;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.45rem;">
+      <button onclick="window.scIrCotizacion()" class="sc-btn sc-btn-blue" style="margin:0;">📋 Cotización</button>
+      <button onclick="window.scNuevoInteres()" class="sc-btn sc-btn-green" style="margin:0;">🔄 Nuevo interés</button>
+    </div>
+    <button onclick="window.scEditarExistente()" class="sc-btn sc-btn-gray" style="margin-top:.4rem;">✏️ Editar datos</button>
+    <button onclick="window.scReiniciar()" class="sc-btn sc-btn-gray">← Otra búsqueda</button>
+  </div>
+
+  <!-- Formulario nuevo cliente -->
+  <div class="sc-card" id="sc-bloque-nuevo" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+      <span class="sc-label" style="margin:0;" id="sc-form-titulo">Nuevo cliente</span>
+      <span class="sc-badge-ok" id="sc-form-badge">✅ Cédula libre</span>
+    </div>
+    <input type="hidden" id="sc-edit-id">
+    <div style="display:flex;flex-direction:column;gap:.65rem;">
+      <div><label class="sc-label">Nombre completo *</label>
+        <input class="sc-input" type="text" id="sc-nombre" placeholder="Ej: María Gómez" autocomplete="name"></div>
+      <div><label class="sc-label">Cédula *</label>
+        <input class="sc-input" type="text" id="sc-cedula" inputmode="numeric"></div>
+      <div><label class="sc-label">Celular *</label>
+        <input class="sc-input" type="tel" id="sc-celular" placeholder="3XXXXXXXXX" inputmode="tel"></div>
+      <div><label class="sc-label">Email</label>
+        <input class="sc-input" type="email" id="sc-email" placeholder="correo@ejemplo.com"></div>
+      <div><label class="sc-label">Municipio</label>
+        <input class="sc-input" type="text" id="sc-municipio" placeholder="Ciudad de residencia"></div>
+      <div><label class="sc-label">¿Cómo nos conoció?</label>
+        <select class="sc-input" id="sc-origen">
+          <option value="">Seleccionar...</option>
+          <option>Instagram</option><option>Facebook</option><option>WhatsApp</option>
+          <option>TikTok</option><option>Referido</option><option>Llamada</option>
+          <option>Web</option><option>Otro</option>
+        </select></div>
+    </div>
+    <div style="margin-top:.85rem;">
+      <button onclick="window.scGuardar()" id="sc-btn-guardar" class="sc-btn sc-btn-green">💾 Guardar y Añadir al Tablero</button>
+      <button onclick="window.scReiniciar()" class="sc-btn sc-btn-gray">← Cancelar</button>
+    </div>
+    <p style="color:#475569;font-size:.68rem;text-align:center;margin-top:.35rem;">Al guardar, el cliente entra al Kanban en "Nuevos Interesados"</p>
+  </div>
+
+  <!-- Form cotización rápida -->
+  <div class="sc-card" id="sc-bloque-cot" style="display:none;">
+    <div class="sc-label" style="margin-bottom:.5rem;">Nueva Cotización</div>
+    <div id="sc-cot-tag" style="background:#172554;color:#93c5fd;font-size:.75rem;font-weight:700;border-radius:.6rem;padding:.4rem .7rem;margin-bottom:.75rem;"></div>
+    <div style="display:flex;flex-direction:column;gap:.6rem;">
+      <div><label class="sc-label">Destino *</label>
+        <select class="sc-input" id="sc-cot-destino" onchange="window.scCalcCot()"><option value="">Cargando...</option></select></div>
+      <div><label class="sc-label">Personas</label>
+        <input class="sc-input" type="number" id="sc-cot-cupos" value="1" min="1" oninput="window.scCalcCot()"></div>
+      <div id="sc-cot-preview" style="display:none;background:#052e16;color:#86efac;font-size:.75rem;font-weight:700;border-radius:.6rem;padding:.4rem .7rem;"></div>
+      <div><label class="sc-label">Notas</label>
+        <textarea class="sc-input" id="sc-cot-notas" rows="2" placeholder="Observaciones..."></textarea></div>
+    </div>
+    <div style="margin-top:.75rem;">
+      <button onclick="window.scGuardarCot()" class="sc-btn sc-btn-blue">💾 Guardar Cotización</button>
+      <button onclick="window.scVolverExistente()" class="sc-btn sc-btn-gray">← Cancelar</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  let clienteActual = null;
+
+  function scToast(msg,color='#059669'){
+    const t=document.getElementById('sc-toast');
+    t.textContent=msg;t.style.background=color;t.style.opacity='1';
+    setTimeout(()=>t.style.opacity='0',2800);
+  }
+  function fmt(n){return '$'+(Number(n)||0).toLocaleString('es-CO');}
+  function mostrar(id){['sc-paso1','sc-bloque-existe','sc-bloque-nuevo','sc-bloque-cot'].forEach(x=>document.getElementById(x).style.display=x===id?'block':'none');}
+
+  // ── Verificar cédula ──────────────────────────────────
+  window.scVerificar=function(){
+    const ced=document.getElementById('sc-cedula-buscar').value.trim();
+    if(!ced){scToast('❗ Ingresa una cédula','#dc2626');return;}
+    const btn=document.getElementById('sc-btn-ver');
+    btn.disabled=true;btn.innerHTML='<span class="sc-spin"></span>Verificando...';
+    google.script.run
+      .withSuccessHandler(res=>{
+        btn.disabled=false;btn.textContent='Verificar';
+        if(res.existe){
+          clienteActual=res.cliente;
+          scMostrarExistente(res.cliente);
+        } else {
+          document.getElementById('sc-cedula').value=ced;
+          document.getElementById('sc-form-titulo').textContent='Nuevo cliente';
+          document.getElementById('sc-form-badge').textContent='✅ Cédula libre';
+          document.getElementById('sc-form-badge').className='sc-badge-ok';
+          document.getElementById('sc-btn-guardar').textContent='💾 Guardar y Añadir al Tablero';
+          document.getElementById('sc-btn-guardar').onclick=scGuardar;
+          document.getElementById('sc-edit-id').value='';
+          mostrar('sc-bloque-nuevo');
+          setTimeout(()=>document.getElementById('sc-nombre').focus(),100);
+        }
+      })
+      .withFailureHandler(e=>{btn.disabled=false;btn.textContent='Verificar';scToast('❗ '+e.message,'#dc2626');})
+      .verificarCedulaExiste(ced);
+  };
+
+  function scMostrarExistente(c){
+    document.getElementById('sc-info-existente').innerHTML=`
+      <span style="color:#64748b;">Nombre:</span><span style="font-weight:700;color:#e2e8f0;">${c.nombre}</span>
+      <span style="color:#64748b;">Cédula:</span><span style="color:#e2e8f0;">${c.cedula}</span>
+      <span style="color:#64748b;">Celular:</span><span style="color:#e2e8f0;">${c.celular}</span>
+      <span style="color:#64748b;">Email:</span><span style="color:#e2e8f0;word-break:break-all;">${c.email||'–'}</span>
+      <span style="color:#64748b;">Municipio:</span><span style="color:#e2e8f0;">${c.municipio||'–'}</span>`;
+    mostrar('sc-bloque-existe');
+  }
+
+  // ── Guardar nuevo cliente ──────────────────────────────
+  window.scGuardar=function(){
+    const nombre=document.getElementById('sc-nombre').value.trim();
+    const celular=document.getElementById('sc-celular').value.trim();
+    if(!nombre){scToast('❗ El nombre es obligatorio','#dc2626');return;}
+    if(!celular){scToast('❗ El celular es obligatorio','#dc2626');return;}
+    const btn=document.getElementById('sc-btn-guardar');
+    btn.disabled=true;btn.innerHTML='<span class="sc-spin"></span>Guardando...';
+    google.script.run
+      .withSuccessHandler(res=>{
+        btn.disabled=false;btn.textContent='💾 Guardar y Añadir al Tablero';
+        if(res.ok){
+          clienteActual=res.cliente;
+          scToast('✅ Cliente creado y añadido al Kanban','#059669');
+          setTimeout(()=>scMostrarExistente(res.cliente),900);
+        } else if(res.existe){
+          clienteActual=res.cliente;
+          scToast('⚠️ La cédula ya estaba registrada','#d97706');
+          scMostrarExistente(res.cliente);
+        } else {
+          scToast('❗ '+(res.error||'Error al guardar'),'#dc2626');
+        }
+      })
+      .withFailureHandler(e=>{btn.disabled=false;btn.textContent='💾 Guardar y Añadir al Tablero';scToast('❗ '+e.message,'#dc2626');})
+      .crearCliente({
+        nombre, cedula:document.getElementById('sc-cedula').value.trim(),
+        celular, email:document.getElementById('sc-email').value.trim(),
+        municipio:document.getElementById('sc-municipio').value.trim(),
+        origen:document.getElementById('sc-origen').value
+      });
+  };
+
+  // ── Nuevo interés (cliente regresa) ───────────────────
+  window.scNuevoInteres=function(){
+    if(!clienteActual)return;
+    if(!confirm('¿Crear nueva entrada en el Kanban para '+clienteActual.nombre+'?'))return;
+    google.script.run
+      .withSuccessHandler(r=>{
+        if(r.ok)scToast('✅ Nueva entrada en Nuevos Interesados','#059669');
+        else scToast('❗ '+(r.error||'Error'),'#dc2626');
+      })
+      .nuevaEntradaSeguimiento(clienteActual.id);
+  };
+
+  // ── Editar cliente existente ──────────────────────────
+  window.scEditarExistente=function(){
+    const c=clienteActual;
+    document.getElementById('sc-edit-id').value=c.id;
+    document.getElementById('sc-nombre').value=c.nombre;
+    document.getElementById('sc-cedula').value=c.cedula;
+    document.getElementById('sc-celular').value=c.celular;
+    document.getElementById('sc-email').value=c.email||'';
+    document.getElementById('sc-municipio').value=c.municipio||'';
+    document.getElementById('sc-origen').value=c.origen||'';
+    document.getElementById('sc-form-titulo').textContent='Editar cliente';
+    document.getElementById('sc-form-badge').textContent='✏️ Modificando';
+    document.getElementById('sc-form-badge').className='sc-badge-warn';
+    const btn=document.getElementById('sc-btn-guardar');
+    btn.textContent='💾 Actualizar Datos';
+    btn.onclick=scActualizar;
+    mostrar('sc-bloque-nuevo');
+  };
+
+  window.scActualizar=function(){
+    const btn=document.getElementById('sc-btn-guardar');
+    btn.disabled=true;btn.innerHTML='<span class="sc-spin"></span>Actualizando...';
+    google.script.run
+      .withSuccessHandler(r=>{
+        btn.disabled=false;btn.textContent='💾 Actualizar Datos';
+        if(r.ok){
+          scToast('✅ Datos actualizados','#059669');
+          clienteActual.nombre=document.getElementById('sc-nombre').value.trim();
+          clienteActual.celular=document.getElementById('sc-celular').value.trim();
+          clienteActual.email=document.getElementById('sc-email').value.trim();
+          clienteActual.municipio=document.getElementById('sc-municipio').value.trim();
+          clienteActual.origen=document.getElementById('sc-origen').value;
+          setTimeout(()=>scMostrarExistente(clienteActual),800);
+        } else scToast('❗ '+(r.error||'Error'),'#dc2626');
+      })
+      .actualizarCliente({
+        id:document.getElementById('sc-edit-id').value,
+        nombre:document.getElementById('sc-nombre').value.trim(),
+        cedula:document.getElementById('sc-cedula').value.trim(),
+        celular:document.getElementById('sc-celular').value.trim(),
+        email:document.getElementById('sc-email').value.trim(),
+        municipio:document.getElementById('sc-municipio').value.trim(),
+        origen:document.getElementById('sc-origen').value
+      });
+  };
+
+  // ── Cotización rápida ─────────────────────────────────
+  window.scIrCotizacion=function(){
+    mostrar('sc-bloque-cot');
+    document.getElementById('sc-cot-tag').textContent='👤 '+clienteActual.nombre+' · '+clienteActual.cedula;
+    google.script.run
+      .withSuccessHandler(ds=>{
+        const sel=document.getElementById('sc-cot-destino');
+        const act=ds.filter(d=>d.estado==='Activo');
+        sel.innerHTML='<option value="">Seleccionar destino...</option>'+
+          act.map(d=>`<option value="${d.id}" data-vp="${d.valorPersona}">${d.ruta} — ${d.fechaViaje||'sin fecha'} (Cupos: ${d.cuposDisponibles})</option>`).join('');
+      })
+      .obtenerDestinos();
+  };
+
+  window.scCalcCot=function(){
+    const sel=document.getElementById('sc-cot-destino');
+    const opt=sel.options[sel.selectedIndex];
+    const cupos=Number(document.getElementById('sc-cot-cupos').value)||1;
+    const vp=Number(opt&&opt.dataset.vp)||0;
+    const prev=document.getElementById('sc-cot-preview');
+    if(vp){prev.textContent=`💰 ${cupos} × ${fmt(vp)} = ${fmt(vp*cupos)}`;prev.style.display='block';}
+    else prev.style.display='none';
+  };
+
+  window.scGuardarCot=function(){
+    const idDest=document.getElementById('sc-cot-destino').value;
+    const cupos=Number(document.getElementById('sc-cot-cupos').value)||1;
+    if(!idDest){scToast('❗ Selecciona un destino','#dc2626');return;}
+    google.script.run
+      .withSuccessHandler(r=>{
+        scToast('✅ Cotización guardada: '+r.id,'#059669');
+        setTimeout(scVolverExistente,1200);
+      })
+      .crearCotizacion({
+        idCliente:clienteActual.id,idDestino:idDest,
+        cantidadCupos:cupos,notas:document.getElementById('sc-cot-notas').value
+      });
+  };
+
+  window.scVolverExistente=function(){mostrar('sc-bloque-existe');};
+
+  window.scReiniciar=function(){
+    clienteActual=null;
+    document.getElementById('sc-cedula-buscar').value='';
+    mostrar('sc-paso1');
+    document.getElementById('sc-btn-guardar').textContent='💾 Guardar y Añadir al Tablero';
+    document.getElementById('sc-btn-guardar').onclick=scGuardar;
+  };
+
+})();
+</script>

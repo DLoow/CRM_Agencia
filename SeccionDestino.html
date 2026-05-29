@@ -1,0 +1,165 @@
+<style>
+.sd-card{background:#1e293b;border-radius:1rem;padding:.9rem;margin:0 .85rem .6rem;}
+.sd-label{display:block;font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;}
+.sd-input{width:100%;background:#0f172a;border:1px solid #334155;border-radius:.65rem;color:#e2e8f0;padding:.5rem .75rem;font-size:.875rem;outline:none;font-family:inherit;box-sizing:border-box;}
+.sd-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+.sd-input option{background:#1e293b;}
+.sd-btn{border-radius:.75rem;padding:.6rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;border:none;width:100%;margin-bottom:.4rem;}
+.sd-btn-blue{background:linear-gradient(135deg,#1e40af,#3b82f6);color:#fff;}
+.sd-btn-gray{background:#0f172a;color:#94a3b8;border:1px solid #334155;}
+.sd-btn-sm{border-radius:.5rem;padding:.3rem .7rem;font-size:.7rem;font-weight:700;cursor:pointer;border:none;}
+.sd-toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%);padding:.45rem 1.2rem;border-radius:9999px;font-size:.8rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;min-width:200px;text-align:center;color:#fff;}
+.sd-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#3b82f6;border-radius:50%;animation:sdsp .7s linear infinite;vertical-align:middle;margin-right:4px;}
+@keyframes sdsp{to{transform:rotate(360deg);}}
+</style>
+
+<div id="sd-toast" class="sd-toast"></div>
+<div style="padding:.85rem 0 1.5rem;">
+
+  <!-- Formulario -->
+  <div class="sd-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;">
+      <span class="sd-label" style="margin:0;" id="sd-form-titulo">Nuevo Destino</span>
+      <button onclick="window.sdLimpiar()" style="background:#0f172a;border:1px solid #334155;color:#64748b;border-radius:.5rem;padding:.2rem .6rem;font-size:.7rem;font-weight:700;cursor:pointer;">Limpiar</button>
+    </div>
+    <input type="hidden" id="sd-id">
+    <div style="display:flex;flex-direction:column;gap:.65rem;">
+      <div><label class="sd-label">Ruta / Nombre del viaje *</label>
+        <input class="sd-input" type="text" id="sd-ruta" placeholder="Ej: Cartagena – Playa Blanca"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+        <div><label class="sd-label">Valor por persona *</label>
+          <input class="sd-input" type="number" id="sd-valor" placeholder="0" inputmode="decimal"></div>
+        <div><label class="sd-label">Cupo total *</label>
+          <input class="sd-input" type="number" id="sd-cupo" placeholder="0" inputmode="numeric"></div>
+      </div>
+      <div><label class="sd-label">Fecha del viaje</label>
+        <input class="sd-input" type="date" id="sd-fecha"></div>
+      <div><label class="sd-label">Punto de encuentro</label>
+        <input class="sd-input" type="text" id="sd-punto" placeholder="Ej: Parque Berrío, 5:00 AM"></div>
+      <div><label class="sd-label">¿Qué incluye?</label>
+        <textarea class="sd-input" id="sd-incluye" rows="3" placeholder="Transporte, hotel, desayunos..."></textarea></div>
+      <div><label class="sd-label">Estado</label>
+        <select class="sd-input" id="sd-estado">
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+          <option value="Lleno">Lleno</option>
+          <option value="Cancelado">Cancelado</option>
+        </select></div>
+    </div>
+    <div style="margin-top:.85rem;">
+      <button onclick="window.sdGuardar()" id="sd-btn-guardar" class="sd-btn sd-btn-blue">💾 Guardar Destino</button>
+    </div>
+  </div>
+
+  <!-- Lista -->
+  <div style="padding:0 .85rem .3rem;">
+    <div class="sd-label" style="margin-bottom:.4rem;">Destinos registrados</div>
+  </div>
+  <div id="sd-lista" style="padding:0 .85rem;">
+    <div style="display:flex;align-items:center;justify-content:center;padding:2rem;gap:.5rem;">
+      <div class="sd-spin" style="border-top-color:#3b82f6;"></div>
+      <span style="color:#475569;font-size:.78rem;">Cargando...</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  function sdToast(msg,color='#059669'){
+    const t=document.getElementById('sd-toast');
+    t.textContent=msg;t.style.background=color;t.style.opacity='1';
+    setTimeout(()=>t.style.opacity='0',2500);
+  }
+  function fmt(n){return '$'+(Number(n)||0).toLocaleString('es-CO');}
+
+  window.sdCargar = sdCargar;
+  function sdCargar(){
+    google.script.run.withSuccessHandler(ds=>{
+      const c=document.getElementById('sd-lista');
+      if(!ds.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1.5rem;">Sin destinos registrados aún</div>';return;}
+      const ECOL={'Activo':'background:#052e16;color:#86efac','Inactivo':'background:#1e293b;color:#64748b','Lleno':'background:#083344;color:#67e8f9','Cancelado':'background:#450a0a;color:#fca5a5'};
+      c.innerHTML=ds.map(d=>{
+        const pct=d.cupo>0?Math.round(((d.cupo-d.cuposDisponibles)/d.cupo)*100):0;
+        return `<div class="sd-card" style="margin-bottom:.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;margin-bottom:.5rem;">
+            <div style="min-width:0;">
+              <div style="font-size:.88rem;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">✈️ ${d.ruta}</div>
+              <div style="font-size:.7rem;color:#64748b;">${d.fechaViaje||'Sin fecha definida'}</div>
+            </div>
+            <span style="${ECOL[d.estado]||'background:#1e293b;color:#64748b'};font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:9999px;flex-shrink:0;">${d.estado}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.3rem .75rem;font-size:.75rem;margin-bottom:.5rem;">
+            <span style="color:#64748b;">Valor/persona:</span><span style="font-weight:700;color:#93c5fd;">${fmt(d.valorPersona)}</span>
+            <span style="color:#64748b;">Cupos disp.:</span><span style="font-weight:700;color:${d.cuposDisponibles===0?'#f87171':'#e2e8f0'};">${d.cuposDisponibles} / ${d.cupo}</span>
+          </div>
+          <div style="background:#334155;border-radius:9999px;height:4px;margin-bottom:.5rem;">
+            <div style="background:${pct===100?'#f87171':'#3b82f6'};border-radius:9999px;height:4px;width:${pct}%;"></div>
+          </div>
+          ${d.incluye?`<div style="font-size:.7rem;color:#64748b;margin-bottom:.5rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">✅ ${d.incluye}</div>`:''}
+          <div style="display:flex;gap:.4rem;">
+            <button onclick='window.sdEditar(${JSON.stringify(d).replace(/'/g,"&#39;")})' class="sd-btn-sm" style="background:#172554;color:#93c5fd;flex:1;">✏️ Editar</button>
+            <button onclick="window.sdToggle('${d.id}','${d.estado==='Activo'?'Inactivo':'Activo'}')"
+              class="sd-btn-sm" style="background:${d.estado==='Activo'?'#450a0a':'#052e16'};color:${d.estado==='Activo'?'#fca5a5':'#86efac'};flex:1;">
+              ${d.estado==='Activo'?'⏸ Pausar':'▶ Activar'}
+            </button>
+          </div>
+        </div>`;
+      }).join('');
+    }).obtenerDestinos();
+  }
+
+  window.sdGuardar=function(){
+    const ruta=document.getElementById('sd-ruta').value.trim();
+    const valor=Number(document.getElementById('sd-valor').value);
+    const cupo=Number(document.getElementById('sd-cupo').value);
+    if(!ruta||!valor||!cupo){sdToast('❗ Ruta, valor y cupo son obligatorios','#dc2626');return;}
+    const datos={
+      id:document.getElementById('sd-id').value,
+      ruta,valorPersona:valor,cupo,
+      fechaViaje:document.getElementById('sd-fecha').value,
+      puntoEncuentro:document.getElementById('sd-punto').value.trim(),
+      incluye:document.getElementById('sd-incluye').value.trim(),
+      estado:document.getElementById('sd-estado').value
+    };
+    const btn=document.getElementById('sd-btn-guardar');
+    btn.disabled=true;btn.innerHTML='<span class="sd-spin"></span>Guardando...';
+    const fn=datos.id?'actualizarDestino':'crearDestino';
+    google.script.run
+      .withSuccessHandler(r=>{
+        btn.disabled=false;btn.textContent='💾 Guardar Destino';
+        sdToast(datos.id?'✅ Destino actualizado':'✅ Destino creado');
+        sdLimpiar();sdCargar();
+      })
+      .withFailureHandler(e=>{btn.disabled=false;btn.textContent='💾 Guardar Destino';sdToast('❗ '+e.message,'#dc2626');})
+      [fn](datos);
+  };
+
+  window.sdEditar=function(d){
+    document.getElementById('sd-form-titulo').textContent='Editar Destino';
+    document.getElementById('sd-id').value=d.id;
+    document.getElementById('sd-ruta').value=d.ruta;
+    document.getElementById('sd-valor').value=d.valorPersona;
+    document.getElementById('sd-cupo').value=d.cupo;
+    document.getElementById('sd-fecha').value=d.fechaViaje||'';
+    document.getElementById('sd-punto').value=d.puntoEncuentro||'';
+    document.getElementById('sd-incluye').value=d.incluye||'';
+    document.getElementById('sd-estado').value=d.estado||'Activo';
+    window.scrollTo(0,0);
+  };
+
+  window.sdToggle=function(id,nuevoEstado){
+    google.script.run.withSuccessHandler(r=>{
+      if(r.ok){sdToast('✅ Estado actualizado');sdCargar();}
+    }).actualizarDestino({id,ruta:'_keep_',valorPersona:0,cupo:0,estado:nuevoEstado});
+  };
+
+  window.sdLimpiar=function(){
+    document.getElementById('sd-form-titulo').textContent='Nuevo Destino';
+    ['sd-id','sd-ruta','sd-valor','sd-cupo','sd-fecha','sd-punto','sd-incluye'].forEach(x=>document.getElementById(x).value='');
+    document.getElementById('sd-estado').value='Activo';
+  };
+
+  sdCargar();
+})();
+</script>

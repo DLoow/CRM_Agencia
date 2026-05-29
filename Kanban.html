@@ -281,12 +281,13 @@ function cargarTablero() {
     '<div class="text-slate-400 text-sm m-6">Cargando tablero...</div>';
   google.script.run
     .withSuccessHandler(renderTablero)
-    .withFailureHandler(e => {
-      document.getElementById('board').innerHTML =
-        '<div class="text-red-400 text-sm m-6">Error: ' + e.message + '</div>';
+    clearTimeout(timeoutId);
+    .withFailureHandler(e=>{
+      clearTimeout(timeoutId);
+      board.innerHTML='<div style="color:#f87171;padding:1.5rem;font-size:.8rem;">❌ Error: ' + (e.message || 'No se pudo cargar el tablero') + '</div>';
     })
     .obtenerReservasPorEtapa();
-}
+};
 
 function renderTablero(tablero) {
   const total = Object.values(tablero).reduce((s, a) => s + a.length, 0);

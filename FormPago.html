@@ -155,7 +155,11 @@ function buscarReservas(){
         (r.id||'').toLowerCase().includes(q)
       );
       renderListaReservas(filtradas);
-    }).obtenerReservas();
+    }).withFailureHandler(e=>{
+    const c = document.getElementById('sp-lista');
+    c.innerHTML = '<div style="color:#f87171;font-size:.75rem;text-align:center;padding:1rem;">❌ Error al cargar reservas: ' + (e.message || 'Desconocido') + '</div>';
+  })
+  .obtenerReservas();
   },350);
 }
 

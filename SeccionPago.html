@@ -1,0 +1,265 @@
+<style>
+.sp-card{background:#1e293b;border-radius:1rem;padding:.9rem;margin:0 .85rem .6rem;}
+.sp-label{display:block;font-size:.68rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem;}
+.sp-input{width:100%;background:#0f172a;border:1px solid #334155;border-radius:.65rem;color:#e2e8f0;padding:.5rem .75rem;font-size:.875rem;outline:none;font-family:inherit;box-sizing:border-box;}
+.sp-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.2);}
+.sp-input option{background:#1e293b;}
+.sp-btn{border-radius:.75rem;padding:.6rem 1rem;font-size:.85rem;font-weight:700;cursor:pointer;border:none;width:100%;margin-bottom:.4rem;}
+.sp-btn-teal{background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;}
+.sp-btn-gray{background:#0f172a;color:#94a3b8;border:1px solid #334155;}
+.sp-res-item{cursor:pointer;transition:background .15s;}
+.sp-res-item:hover{background:#172554;}
+.sp-toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%);padding:.45rem 1.2rem;border-radius:9999px;font-size:.8rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;min-width:220px;text-align:center;color:#fff;}
+.sp-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#14b8a6;border-radius:50%;animation:spsp .7s linear infinite;vertical-align:middle;margin-right:4px;}
+@keyframes spsp{to{transform:rotate(360deg);}}
+</style>
+
+<div id="sp-toast" class="sp-toast"></div>
+<div style="padding:.85rem 0 1.5rem;">
+
+  <!-- Paso 1: buscar reserva -->
+  <div id="sp-paso1">
+    <div class="sp-card">
+      <div class="sp-label" style="margin-bottom:.5rem;">Buscar reserva o cliente</div>
+      <input class="sp-input" type="text" id="sp-buscar" placeholder="Nombre del cliente..."
+             oninput="window.spDebounce()" autocomplete="off">
+    </div>
+    <div id="sp-lista" style="padding:0 .85rem;"></div>
+  </div>
+
+  <!-- Reserva seleccionada -->
+  <div id="sp-info-res" class="sp-card" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.6rem;">
+      <span class="sp-label" style="margin:0;">Reserva seleccionada</span>
+      <button onclick="window.spLimpiar()" style="background:none;border:none;color:#475569;font-size:1.2rem;cursor:pointer;">✕</button>
+    </div>
+    <div id="sp-res-body" style="display:grid;grid-template-columns:auto 1fr;gap:.2rem .75rem;font-size:.78rem;color:#cbd5e1;margin-bottom:.6rem;"></div>
+    <div style="margin-bottom:.3rem;">
+      <div style="display:flex;justify-content:space-between;font-size:.68rem;color:#64748b;margin-bottom:.2rem;">
+        <span>Progreso de pago</span>
+        <span id="sp-pct" style="font-weight:700;color:#3b82f6;">0%</span>
+      </div>
+      <div style="background:#334155;border-radius:9999px;height:5px;">
+        <div id="sp-prog" style="background:#3b82f6;border-radius:9999px;height:5px;width:0%;transition:width .4s;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulario pago -->
+  <div id="sp-form" class="sp-card" style="display:none;">
+    <div class="sp-label" style="margin-bottom:.75rem;">Datos del pago</div>
+    <div style="display:flex;flex-direction:column;gap:.65rem;">
+      <div>
+        <label class="sp-label">Monto a abonar *</label>
+        <input class="sp-input" type="number" id="sp-monto" placeholder="0" inputmode="decimal" oninput="window.spCalcSaldo()">
+        <div id="sp-saldo-prev" style="display:none;font-size:.75rem;font-weight:700;border-radius:.6rem;padding:.35rem .6rem;margin-top:.3rem;"></div>
+      </div>
+      <div><label class="sp-label">Método de pago</label>
+        <select class="sp-input" id="sp-metodo">
+          <option>Transferencia bancaria</option><option>Nequi</option><option>Daviplata</option>
+          <option>Efectivo</option><option>PSE</option><option>Tarjeta débito</option>
+          <option>Tarjeta crédito</option><option>Otro</option>
+        </select></div>
+      <div><label class="sp-label">Fecha del pago</label>
+        <input class="sp-input" type="date" id="sp-fecha"></div>
+      <div><label class="sp-label">Referencia / Nro. comprobante</label>
+        <input class="sp-input" type="text" id="sp-ref" placeholder="Ej: 2024XXXXXX"></div>
+      <div>
+        <label class="sp-label">📎 Comprobante (imagen o PDF)</label>
+        <input class="sp-input" type="file" id="sp-archivo" accept="image/*,application/pdf"
+               onchange="window.spPrevArchivo(this)" style="padding:.4rem;">
+        <div id="sp-file-prev" style="display:none;background:#172554;color:#93c5fd;font-size:.72rem;font-weight:600;border-radius:.6rem;padding:.35rem .6rem;margin-top:.3rem;display:flex;align-items:center;gap:.4rem;">
+          <span>📄</span><span id="sp-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+          <button onclick="window.spQuitarArchivo()" style="background:none;border:none;color:#f87171;font-weight:700;cursor:pointer;font-size:.8rem;padding:0;">✕</button>
+        </div>
+      </div>
+      <div><label class="sp-label">Notas</label>
+        <textarea class="sp-input" id="sp-notas" rows="2" placeholder="Observaciones..."></textarea></div>
+    </div>
+    <div style="margin-top:.85rem;">
+      <button onclick="window.spGuardar()" id="sp-btn-guardar" class="sp-btn sp-btn-teal">💾 Registrar Pago</button>
+      <button onclick="window.spLimpiar()" class="sp-btn sp-btn-gray">✕ Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Historial de la reserva -->
+  <div id="sp-historial-sec" style="display:none;">
+    <div style="padding:0 .85rem .3rem;">
+      <span class="sp-label">Pagos registrados en esta reserva</span>
+    </div>
+    <div id="sp-historial" style="padding:0 .85rem;"></div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  let reservaActiva=null;
+  let debTimer=null;
+
+  function spToast(msg,color='#059669'){
+    const t=document.getElementById('sp-toast');
+    t.textContent=msg;t.style.background=color;t.style.opacity='1';
+    setTimeout(()=>t.style.opacity='0',2800);
+  }
+  function fmt(n){return '$'+(Number(n)||0).toLocaleString('es-CO');}
+
+  window.spDebounce=function(){clearTimeout(debTimer);debTimer=setTimeout(spBuscarRes,380);};
+
+  function spBuscarRes(){
+    const q=document.getElementById('sp-buscar').value.trim().toLowerCase();
+    if(q.length<2){document.getElementById('sp-lista').innerHTML='';return;}
+    google.script.run.withSuccessHandler(rs=>{
+      const filtradas=rs.filter(r=>
+        !String(r.id).startsWith('SEG-')&&(
+          (r.nombreCliente||'').toLowerCase().includes(q)||
+          (r.ruta||'').toLowerCase().includes(q)||
+          (r.id||'').toLowerCase().includes(q)
+        )
+      );
+      const c=document.getElementById('sp-lista');
+      if(!filtradas.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin resultados (solo reservas confirmadas)</div>';return;}
+      c.innerHTML=filtradas.slice(0,6).map(r=>{
+        const pct=r.totalPagar>0?Math.round((r.totalAbono/r.totalPagar)*100):0;
+        return `<div class="sp-card sp-res-item" onclick='window.spSelRes(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;">
+            <div>
+              <div style="font-size:.85rem;font-weight:700;color:#f1f5f9;">${r.nombreCliente}</div>
+              <div style="font-size:.72rem;color:#64748b;">✈️ ${r.ruta||'–'}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:.72rem;font-weight:700;color:${Number(r.saldoPendiente)===0?'#34d399':'#f87171'};">${fmt(r.saldoPendiente)}</div>
+              <div style="font-size:.65rem;color:#475569;">${pct}% pagado</div>
+            </div>
+          </div>
+          <div style="background:#334155;border-radius:9999px;height:3px;margin-top:.4rem;">
+            <div style="background:${pct===100?'#34d399':'#3b82f6'};border-radius:9999px;height:3px;width:${pct}%;"></div>
+          </div>
+        </div>`;
+      }).withFailureHandler(e=>{
+    const c = document.getElementById('sp-lista');
+    c.innerHTML = '<div style="color:#f87171;font-size:.75rem;text-align:center;padding:1rem;">❌ Error al cargar reservas: ' + (e.message || 'Desconocido') + '</div>';
+  })
+  .obtenerReservas();
+  }
+
+  window.spSelRes=function(r){
+    reservaActiva=r;
+    document.getElementById('sp-lista').innerHTML='';
+    document.getElementById('sp-buscar').value='';
+    const pct=r.totalPagar>0?Math.round((r.totalAbono/r.totalPagar)*100):0;
+    document.getElementById('sp-res-body').innerHTML=`
+      <span style="color:#64748b;">ID:</span><span style="font-weight:600;">${r.id}</span>
+      <span style="color:#64748b;">Cliente:</span><span style="font-weight:600;">${r.nombreCliente}</span>
+      <span style="color:#64748b;">Destino:</span><span>${r.ruta||'–'}</span>
+      <span style="color:#64748b;">Total:</span><span style="font-weight:600;">${fmt(r.totalPagar)}</span>
+      <span style="color:#64748b;">Abonado:</span><span style="font-weight:600;color:#86efac;">${fmt(r.totalAbono)}</span>
+      <span style="color:#64748b;">Saldo:</span><span style="font-weight:700;color:${Number(r.saldoPendiente)===0?'#86efac':'#f87171'};">${fmt(r.saldoPendiente)}</span>`;
+    document.getElementById('sp-pct').textContent=pct+'%';
+    document.getElementById('sp-prog').style.width=pct+'%';
+    document.getElementById('sp-prog').style.background=pct===100?'#34d399':'#3b82f6';
+    document.getElementById('sp-info-res').style.display='block';
+    document.getElementById('sp-form').style.display='block';
+    document.getElementById('sp-fecha').value=new Date().toISOString().split('T')[0];
+    spCargarHistorial(r.id);
+  };
+
+  window.spCalcSaldo=function(){
+    if(!reservaActiva)return;
+    const monto=Number(document.getElementById('sp-monto').value)||0;
+    const nuevoSaldo=Math.max(0,Number(reservaActiva.saldoPendiente)-monto);
+    const prev=document.getElementById('sp-saldo-prev');
+    if(monto>0){
+      const saldado=nuevoSaldo===0;
+      prev.style.background=saldado?'#052e16':'#172554';
+      prev.style.color=saldado?'#86efac':'#93c5fd';
+      prev.textContent=saldado?'✅ Con este pago quedaría completamente saldado':`Nuevo saldo: ${fmt(nuevoSaldo)}`;
+      prev.style.display='block';
+    } else prev.style.display='none';
+  };
+
+  function spCargarHistorial(idRes){
+    google.script.run.withSuccessHandler(ps=>{
+      const sec=document.getElementById('sp-historial-sec');
+      const c=document.getElementById('sp-historial');
+      if(!ps.length){sec.style.display='none';return;}
+      sec.style.display='block';
+      c.innerHTML=ps.map(p=>`
+        <div class="sp-card" style="display:flex;justify-content:space-between;align-items:center;gap:.4rem;margin-bottom:.4rem;">
+          <div>
+            <div style="font-size:.82rem;font-weight:700;color:#86efac;">${fmt(p.monto)}</div>
+            <div style="font-size:.7rem;color:#64748b;">${p.metodo||'–'} · ${p.fecha}${p.ref?' · '+p.ref:''}</div>
+          </div>
+          ${p.enlace?`<a href="${p.enlace}" target="_blank"
+            style="background:#172554;color:#93c5fd;font-size:.7rem;font-weight:700;padding:.25rem .6rem;border-radius:.5rem;text-decoration:none;flex-shrink:0;">📎 Ver</a>`:''}
+        </div>`).join('');
+    }).obtenerPagosPorReserva(idRes);
+  }
+
+  window.spGuardar=function(){
+    const monto=Number(document.getElementById('sp-monto').value);
+    if(!monto||monto<=0){spToast('❗ Ingresa un monto válido','#dc2626');return;}
+    if(!reservaActiva){spToast('❗ Selecciona una reserva','#dc2626');return;}
+    const datos={
+      idReserva:reservaActiva.id,idCliente:reservaActiva.idCliente,
+      montoAbonado:monto,metodoPago:document.getElementById('sp-metodo').value,
+      referencia:document.getElementById('sp-ref').value.trim(),
+      fechaPago:document.getElementById('sp-fecha').value,
+      notas:document.getElementById('sp-notas').value.trim()
+    };
+    const file=document.getElementById('sp-archivo').files[0];
+    const btn=document.getElementById('sp-btn-guardar');
+    btn.disabled=true;btn.innerHTML='<span class="sp-spin"></span>Registrando...';
+    if(file){
+      const reader=new FileReader();
+      reader.onload=e=>{
+        datos.archivoBase64=e.target.result.split(',')[1];
+        datos.nombreArchivo=file.name;datos.mimeType=file.type;
+        spEnviar(datos,btn);
+      };
+      reader.readAsDataURL(file);
+    } else spEnviar(datos,btn);
+  };
+
+  function spEnviar(datos,btn){
+    google.script.run
+      .withSuccessHandler(r=>{
+        btn.disabled=false;btn.textContent='💾 Registrar Pago';
+        if(r.ok){
+          spToast('✅ Pago registrado correctamente','#059669');
+          reservaActiva.totalAbono=(Number(reservaActiva.totalAbono)||0)+datos.montoAbonado;
+          reservaActiva.saldoPendiente=Math.max(0,(Number(reservaActiva.saldoPendiente)||0)-datos.montoAbonado);
+          spSelRes(reservaActiva);
+          document.getElementById('sp-monto').value='';
+          document.getElementById('sp-ref').value='';
+          document.getElementById('sp-notas').value='';
+          document.getElementById('sp-archivo').value='';
+          document.getElementById('sp-file-prev').style.display='none';
+          document.getElementById('sp-saldo-prev').style.display='none';
+        } else spToast('❗ '+(r.error||'Error'),'#dc2626');
+      })
+      .withFailureHandler(e=>{btn.disabled=false;btn.textContent='💾 Registrar Pago';spToast('❗ '+e.message,'#dc2626');})
+      .registrarPago(datos);
+  }
+
+  window.spPrevArchivo=function(input){
+    const file=input.files[0];if(!file)return;
+    const prev=document.getElementById('sp-file-prev');
+    document.getElementById('sp-file-name').textContent=file.name+' ('+(file.size/1024).toFixed(1)+' KB)';
+    prev.style.display='flex';
+  };
+  window.spQuitarArchivo=function(){
+    document.getElementById('sp-archivo').value='';
+    document.getElementById('sp-file-prev').style.display='none';
+  };
+
+  window.spLimpiar=function(){
+    reservaActiva=null;
+    document.getElementById('sp-info-res').style.display='none';
+    document.getElementById('sp-form').style.display='none';
+    document.getElementById('sp-historial-sec').style.display='none';
+    document.getElementById('sp-buscar').value='';
+    document.getElementById('sp-lista').innerHTML='';
+  };
+})();
+</script>
