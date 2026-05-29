@@ -101,6 +101,7 @@ function confirmarReserva(datos) {
   const hRes  = ss.getSheetByName(CONFIG.SHEETS.RESERVAS);
   const hDest = ss.getSheetByName(CONFIG.SHEETS.DESTINOS);
   const filas = hRes.getDataRange().getValues();
+  
 
   // Buscar la fila de seguimiento del cliente
   let filaIdx = -1;
@@ -115,24 +116,44 @@ function confirmarReserva(datos) {
 
   // Obtener datos del destino
   let rutaNombre = '', fechaViaje = '';
-  if (datos.idDestino) {
-    const destinos = hDest.getDataRange().getValues();
-    for (let i = 1; i < destinos.length; i++) {
-      if (String(destinos[i][0]).trim() === String(datos.idDestino).trim()) {
-        rutaNombre = destinos[i][1];
-        fechaViaje = destinos[i][7]
-          ? (destinos[i][7] instanceof Date ? destinos[i][7].toLocaleDateString('es-CO') : destinos[i][7])
-          : '';
-        // Descontar cupos
-        const cuposActuales   = Number(destinos[i][4]);
-        const cuposReservados = Number(datos.cantidadCupos || 1);
-        if (cuposActuales >= cuposReservados) {
-          hDest.getRange(i + 1, 5).setValue(cuposActuales - cuposReservados);
+if (datos.idDestino) {
+  const destinos = hDest.getDataRange().getValues();
+  let encontrado = false;
+  for (let i = 1; i < destinos.length; i++) {
+    if (String(destinos[i][0]).trim() === String(datos.idDestino).trim()) {
+      encontrado = true;
+      rutaNombre = destinos[i][1];
+      // Manejo robusto de fecha
+      let fechaRaw = destinos[i][7];
+      if (fechaRaw) {
+        if (fechaRaw instanceof Date) {
+          fechaViaje = Utilities.formatDate(fechaRaw, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+        } else if (typeof fechaRaw === 'string') {
+          // Intentar parsear string como fecha
+          let fechaParse = new Date(fechaRaw);
+          if (!isNaN(fechaParse.getTime())) {
+            fechaViaje = Utilities.formatDate(fechaParse, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+          } else {
+            fechaViaje = fechaRaw;
+          }
+        } else {
+          fechaViaje = fechaRaw.toString();
         }
-        break;
       }
+      hRes.getRange(filaIdx, 14).setValue(datos.cantidadCupos || 1); // Cupos_Reservados
+      // Descontar cupos
+      const cuposActuales   = Number(destinos[i][4]);
+      const cuposReservados = Number(datos.cantidadCupos || 1);
+      if (cuposActuales >= cuposReservados) {
+        hDest.getRange(i + 1, 5).setValue(cuposActuales - cuposReservados);
+      }
+      break;
     }
   }
+  if (!encontrado) {
+    console.error('Destino no encontrado: ' + datos.idDestino);
+  }
+}
 
   // Generar ID_Reserva real
   const idReserva = generarId('RES');

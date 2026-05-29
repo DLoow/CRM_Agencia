@@ -92,7 +92,7 @@ function configurarHojas() {
     { nombre: CONFIG.SHEETS.PASAJEROS,
       cols: ['ID_Pasajero','ID_Reserva','ID_Cliente','Nombre_Pasajero','Cedula','Celular','Email','Tipo_Documento','Fecha_Nacimiento','Notas'] },
     { nombre: CONFIG.SHEETS.PAGOS,
-      cols: ['ID_Pago','ID_Reserva','ID_Cliente','Nombre_Cliente','Fecha_Pago','Monto_Abonado','Metodo_Pago','Referencia_Comprobante','Enlace_Comprobante','Notas'] }
+      cols: ['ID_Pago','ID_Reserva','ID_Cliente','Nombre_Cliente','Fecha_Pago','Monto_Abonado','Metodo_Pago','Referencia_Comprobante','Enlace_Comprobante','Cupos_Reservados','Notas'] }
   ];
   hojas.forEach(function(h) {
     var hoja = ss.getSheetByName(h.nombre);

@@ -32,6 +32,7 @@ function obtenerReservas() {
         saldoPendiente: Number(f[10]) || 0,
         fechaReserva: f[11] ? (f[11] instanceof Date ? f[11].toLocaleDateString('es-CO') : f[11].toString()) : '',
         notas: f[12] ? f[12].toString() : '',
+        cuposReservados: Number(f[13]) || 0,
         esReservaReal: !String(f[0]).startsWith('SEG-')
       }));
   } catch (e) {

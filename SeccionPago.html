@@ -118,14 +118,14 @@
         )
       );
       const c=document.getElementById('sp-lista');
-      if(!filtradas.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin resultados (solo reservas confirmadas)</div>';return;}
+      if(!filtradas.length){c.innerHTML='<div style="color:#475569;font-size:.75rem;text-align:center;padding:1rem;">Sin resultados. Busca por nombre, ruta o ID de reserva.</div>';return;}
       c.innerHTML=filtradas.slice(0,6).map(r=>{
         const pct=r.totalPagar>0?Math.round((r.totalAbono/r.totalPagar)*100):0;
         return `<div class="sp-card sp-res-item" onclick='window.spSelRes(${JSON.stringify(r).replace(/'/g,"&#39;")})'>
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.4rem;">
             <div>
               <div style="font-size:.85rem;font-weight:700;color:#f1f5f9;">${r.nombreCliente}</div>
-              <div style="font-size:.72rem;color:#64748b;">✈️ ${r.ruta||'–'}</div>
+              <div style="font-size:.72rem;color:#64748b;">✈️ ${r.ruta||'Sin destino asignado'}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-size:.72rem;font-weight:700;color:${Number(r.saldoPendiente)===0?'#34d399':'#f87171'};">${fmt(r.saldoPendiente)}</div>
@@ -136,11 +136,13 @@
             <div style="background:${pct===100?'#34d399':'#3b82f6'};border-radius:9999px;height:3px;width:${pct}%;"></div>
           </div>
         </div>`;
-      }).withFailureHandler(e=>{
-    const c = document.getElementById('sp-lista');
-    c.innerHTML = '<div style="color:#f87171;font-size:.75rem;text-align:center;padding:1rem;">❌ Error al cargar reservas: ' + (e.message || 'Desconocido') + '</div>';
-  })
-  .obtenerReservas();
+      }).join('');
+    })
+    .withFailureHandler(e=>{
+      const c=document.getElementById('sp-lista');
+      c.innerHTML='<div style="color:#f87171;font-size:.75rem;text-align:center;padding:1rem;">❌ Error al cargar reservas: '+(e.message||'Desconocido')+'</div>';
+    })
+    .obtenerReservas();
   }
 
   window.spSelRes=function(r){

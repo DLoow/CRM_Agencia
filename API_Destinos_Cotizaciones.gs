@@ -118,7 +118,6 @@ function obtenerCotizaciones(idCliente) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
   const hoja  = ss.getSheetByName(CONFIG.SHEETS.COTIZACIONES);
   const filas = hoja.getDataRange().getValues().slice(1);
-
   const todas = filas.filter(f => f[0]).map(f => ({
     id:            f[0],
     idCliente:     f[1],
@@ -131,7 +130,6 @@ function obtenerCotizaciones(idCliente) {
     estado:        f[8],
     notas:         f[9]
   }));
-
   if (idCliente) return todas.filter(c => String(c.idCliente) === String(idCliente));
   return todas;
 }
